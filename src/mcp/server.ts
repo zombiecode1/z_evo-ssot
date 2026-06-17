@@ -45,8 +45,9 @@ const mcpServer = new McpServer({
 // ── Tool: Read File ──────────────────────────────────────────
 mcpServer.tool(
   'read_file',
+  'Read the contents of any file. Use when user asks about code, config, or file content.',
   { file_path: z.string().describe('Absolute path to file'), max_lines: z.number().optional().default(100) },
-  { title: 'Read the contents of any file. Use when user asks about code, config, or file content.' },
+  {},
   async ({ file_path, max_lines }) => {
     try {
       const content = fs.readFileSync(file_path, 'utf-8');
@@ -67,8 +68,9 @@ mcpServer.tool(
 // ── Tool: List Files ──────────────────────────────────────────
 mcpServer.tool(
   'list_files',
+  'List files and directories in a given path. Use to understand project structure.',
   { directory: z.string().describe('Directory path to list'), pattern: z.string().optional().describe('Glob pattern to filter') },
-  { title: 'List files and directories in a given path. Use to understand project structure.' },
+  {},
   async ({ directory, pattern }) => {
     try {
       if (!fs.existsSync(directory)) {
@@ -90,8 +92,9 @@ mcpServer.tool(
 // ── Tool: Search Code (grep) ──────────────────────────────────
 mcpServer.tool(
   'search_code',
+  'Search for a pattern in file contents (grep). Find specific code, functions, or variables.',
   { pattern: z.string().describe('Regex pattern to search'), directory: z.string().optional().describe('Directory to search in'), file_pattern: z.string().optional().describe('File pattern filter') },
-  { title: 'Search for a pattern in file contents (grep). Find specific code, functions, or variables.' },
+  {},
   async ({ pattern, directory, file_pattern }) => {
     try {
       const dir = directory || process.cwd();
@@ -113,8 +116,9 @@ mcpServer.tool(
 // ── Tool: Count Models ──────────────────────────────────────
 mcpServer.tool(
   'count_models',
+  'Count AI models in the system database. Use when user asks about models.',
   {},
-  { title: 'Count AI models in the system database. Use when user asks about models.' },
+  {},
   async () => {
     try {
       const db = getMcpDb();
@@ -135,8 +139,9 @@ mcpServer.tool(
 // ── Tool: Count Providers ──────────────────────────────────────
 mcpServer.tool(
   'count_providers',
+  'Count LLM providers configured in the system.',
   {},
-  { title: 'Count LLM providers configured in the system.' },
+  {},
   async () => {
     try {
       const db = getMcpDb();
@@ -155,8 +160,9 @@ mcpServer.tool(
 // ── Tool: Run Command ──────────────────────────────────────
 mcpServer.tool(
   'run_command',
+  'Execute a shell command and return output.',
   { command: z.string().describe('Shell command to execute'), timeout: z.number().optional().default(15000) },
-  { title: 'Execute a shell command and return output.' },
+  {},
   async ({ command, timeout }) => {
     try {
       const result = execSync(command, { encoding: 'utf-8', timeout: timeout || 15000, cwd: process.cwd() });
@@ -170,8 +176,9 @@ mcpServer.tool(
 // ── Tool: Get Project Info ──────────────────────────────────
 mcpServer.tool(
   'get_project_info',
+  'Get basic info about the project (name, version, dependencies).',
   { directory: z.string().optional().describe('Project directory') },
-  { title: 'Get basic info about the project (name, version, dependencies).' },
+  {},
   async ({ directory }) => {
     try {
       const dir = directory || process.cwd();
@@ -195,8 +202,9 @@ mcpServer.tool(
 // ── Tool: DB Query ──────────────────────────────────────────
 mcpServer.tool(
   'db_query',
+  'Query the state database (SELECT only). Use for conversations, usage, system state.',
   { query: z.string().describe('SQL SELECT query') },
-  { title: 'Query the state database (SELECT only). Use for conversations, usage, system state.' },
+  {},
   async ({ query }) => {
     try {
       const db = getMcpDb();

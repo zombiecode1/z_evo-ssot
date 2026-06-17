@@ -53,7 +53,7 @@ const MCP_SERVER_ENTRY = require('path').join(__dirname, '..', 'mcp', 'server-en
 let mcpClient: MultiServerMCPClient | null = null;
 let mcpTools: any[] = [];
 
-async function getMcpToolsForAgent(): Promise<any[]> {
+export async function getMcpToolsForAgent(): Promise<any[]> {
   if (mcpTools.length > 0) return mcpTools;
 
   try {

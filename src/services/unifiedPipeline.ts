@@ -31,6 +31,52 @@ import { MawlanaRouter } from './mawlanaRouter';
 import type { GroqService } from './groqService';
 import crypto from 'crypto';
 
+// ─── MCP Tool Support ─────────────────────────────────────
+// Lazy-load MCP tools for agent endpoints (via @langchain/mcp-adapters)
+
+let _mcpToolsCache: any[] | null = null;
+
+/**
+ * Load MCP tools and convert to AI SDK format.
+ * Tools are cached after first load.
+ */
+export async function loadMcpToolsForPipeline(): Promise<Record<string, Tool<any, any>> | undefined> {
+  try {
+    // Dynamic import to avoid circular dependencies
+    const { getMcpToolsForAgent } = require('./langchainAgent');
+    const langchainTools = await getMcpToolsForAgent();
+
+    if (!langchainTools || langchainTools.length === 0) {
+      return undefined;
+    }
+
+    // Convert LangChain tools to AI SDK format
+    const tools: Record<string, Tool<any, any>> = {};
+    for (const lcTool of langchainTools) {
+      const toolSchema = lcTool.schema || lcTool.parameters || { type: 'object', properties: {} };
+      // LangChain tools may have schema as a Zod schema or plain object
+      let jsonSchemaDef: any;
+      if (toolSchema && typeof toolSchema === 'object' && toolSchema._def) {
+        // Zod schema — use empty object schema as fallback
+        jsonSchemaDef = { type: 'object', properties: {} };
+      } else {
+        jsonSchemaDef = toolSchema;
+      }
+
+      tools[lcTool.name] = {
+        description: lcTool.description || '',
+        inputSchema: jsonSchema(jsonSchemaDef),
+      };
+    }
+
+    console.log(`🔧 Pipeline MCP tools: ${Object.keys(tools).length} tools loaded`);
+    return tools;
+  } catch (err: any) {
+    console.warn('Pipeline MCP tools load failed:', err?.message || err);
+    return undefined;
+  }
+}
+
 // ─── Types ─────────────────────────────────────────────────────
 
 export interface PipelineInput {
@@ -263,6 +309,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
   // 7. Convert tools (OpenAI format → AI SDK format)
   const toolConfig = convertTools(input.tools, input.tool_choice);
 
+  // 7b. Load MCP tools if enableTools is true (agent endpoint)
+  let mcpToolConfig: { tools?: Record<string, Tool<any, any>> } | undefined;
+  if (input.enableTools && !toolConfig) {
+    const mcpTools = await loadMcpToolsForPipeline();
+    if (mcpTools) {
+      mcpToolConfig = { tools: mcpTools };
+    }
+  }
+
   // 8. Call AI SDK generateText (Provider Truth)
   const generateParams: any = {
     model,
@@ -278,6 +333,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
       generateParams.toolChoice = toolConfig.toolChoice;
     }
     // maxSteps for tool call loops — AI SDK will auto-loop tool calls
+    generateParams.maxSteps = input.maxSteps || 10;
+  } else if (mcpToolConfig) {
+    // MCP tools from agent endpoint — use 'auto' tool choice
+    generateParams.tools = mcpToolConfig.tools;
+    generateParams.toolChoice = 'auto';
     generateParams.maxSteps = input.maxSteps || 10;
   }
 
@@ -373,6 +433,15 @@ export async function runStreamingPipeline(
   // 6. Convert tools (OpenAI format → AI SDK format)
   const toolConfig = convertTools(input.tools, input.tool_choice);
 
+  // 6b. Load MCP tools if enableTools is true (agent endpoint)
+  let mcpToolConfig: { tools?: Record<string, Tool<any, any>> } | undefined;
+  if (input.enableTools && !toolConfig) {
+    const mcpTools = await loadMcpToolsForPipeline();
+    if (mcpTools) {
+      mcpToolConfig = { tools: mcpTools };
+    }
+  }
+
   // 7. Call AI SDK streamText (Provider Truth — single call, no double-call)
   const streamParams: any = {
     model,
@@ -387,6 +456,10 @@ export async function runStreamingPipeline(
     if (toolConfig.toolChoice) {
       streamParams.toolChoice = toolConfig.toolChoice;
     }
+    streamParams.maxSteps = input.maxSteps || 10;
+  } else if (mcpToolConfig) {
+    streamParams.tools = mcpToolConfig.tools;
+    streamParams.toolChoice = 'auto';
     streamParams.maxSteps = input.maxSteps || 10;
   }
 

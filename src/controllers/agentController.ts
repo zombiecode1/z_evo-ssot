@@ -566,6 +566,7 @@ export const handleAgentChat = async (req: Request, res: Response) => {
       temperature: body.temperature,
       maxOutputTokens: body.max_tokens ?? body.max_completion_tokens,
       enableRag: true,
+      enableTools: true, // Load MCP tools for agent endpoint
     });
 
     // Persist assistant response to conversation history
