@@ -57,6 +57,16 @@ export const handleChatCompletion = async (req: Request, res: Response) => {
     if (isStream) {
       // ─── Streaming via Unified Pipeline ─────────────────────────
       try {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        });
+        res.flushHeaders?.();
+        res.socket?.setNoDelay(true);
+        res.write(': connected\n\n');
+
         const streamResult = await runStreamingPipeline({
           messages: params.messages.map(m => ({
             role: m.role as string,
@@ -70,14 +80,7 @@ export const handleChatCompletion = async (req: Request, res: Response) => {
           temperature: params.temperature ?? undefined,
           tools: params.tools as any,
           tool_choice: params.tool_choice as any,
-          enableRag: false, // Legacy route: no RAG by default
-        });
-
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          'X-Accel-Buffering': 'no',
+          enableRag: false,
         });
 
         // Use textStream for legacy route (text-only, no reasoning/tool parts)
@@ -229,6 +232,8 @@ export const handleTextCompletion = async (req: Request, res: Response) => {
         'Connection': 'keep-alive',
         'X-Accel-Buffering': 'no',
       });
+      res.flushHeaders?.();
+      res.socket?.setNoDelay(true);
 
       // Track chunk metadata for normalization
       let chunkId: string | null = null;

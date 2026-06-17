@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZombieCoder — ডকুমেন্টেশন</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #22c55e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 { color: var(--primary); font-size: 2rem; margin-bottom: 4px; }
+        h2 { color: var(--primary); font-size: 1.4rem; margin: 32px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        h3 { font-size: 1.1rem; margin: 20px 0 8px; color: var(--text); }
+        p, li { color: var(--text-muted); font-size: 0.95rem; }
+        a { color: var(--primary); }
+        .tagline { font-size: 1rem; color: var(--text-muted); margin-bottom: 24px; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 16px 0;
+        }
+        .card h3 { margin-top: 0; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+            margin: 12px 0;
+        }
+        .agent-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+        }
+        .agent-card h4 { color: var(--primary); margin-bottom: 4px; font-size: 0.95rem; }
+        .agent-card p { font-size: 0.85rem; margin: 0; }
+        .agent-card .model-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            background: #1e3a5f;
+            padding: 2px 8px;
+            border-radius: 8px;
+            margin-top: 6px;
+            color: #93c5fd;
+        }
+        code, pre {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: #0f172a;
+            border-radius: 5px;
+            font-size: 0.85rem;
+        }
+        code { padding: 2px 6px; }
+        pre {
+            padding: 14px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th { color: var(--primary); font-weight: 600; }
+        .badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 10px;
+            background: #166534;
+            color: var(--success);
+        }
+        ul, ol { padding-left: 20px; }
+        li { margin-bottom: 4px; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+        .footer { margin-top: 40px; font-size: 0.8rem; color: #64748b; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧟 ZombieCoder Agent Module</h1>
+        <div class="tagline">v2.0.0 — "যেখানে কোড ও কথা বলে" — by <strong>Sahon Srabon</strong>, Developer Zone, Dhaka, Bangladesh</div>
+
+        <div class="card">
+            <h3>📌 এটি কী?</h3>
+            <p>ZombieCoder একটি <strong>মাল্টি-এজেন্ট AI সিস্টেম</strong> যা ৫টি ভিন্ন AI এজেন্ট নিয়ে কাজ করে। প্রতিটি এজেন্ট আলাদা আলাদা কাজে বিশেষজ্ঞ — যেমন কোড লেখা, আর্কিটেকচার ডিজাইন, টেস্টিং, ডকুমেন্টেশন, এবং অপারেশন।</p>
+            <p style="margin-top:8px">এটি সম্পূর্ণরূপে <strong>কনফিগারেবল</strong> — কোন এজেন্ট কোন মডেল, কোন প্রোভাইডার, এবং কোন URL ব্যবহার করবে তা <code>.env</code> ফাইলের মাধ্যমে সেট করা যায়। কোডে কোনো হার্ডকোডেড মডেল নেই।</p>
+        </div>
+
+        <h2>🏗️ আর্কিটেকচার</h2>
+        <p>সিস্টেমটি তিনটি লেয়ারে বিভক্ত:</p>
+        <ol>
+            <li><strong>LLM Gateway</strong> — বিভিন্ন AI প্রোভাইডার (OpenCode Zen, Ollama, Gemini, ইত্যাদি) ম্যানেজ করে। এনভায়রনমেন্ট ভেরিয়েবল থেকে প্রোভাইডার ও মডেল সিলেক্ট করে।</li>
+            <li><strong>Agent Layer</strong> — ৫টি স্পেশালিস্ট এজেন্ট, প্রত্যেকের নিজস্ব system prompt এবং কনফিগারেশন। <code>BaseAgent</code> → <code>AgentLoop</code> → specialist agent।</li>
+            <li><strong>Orchestrator</strong> — <code>MultiAgentOrchestrator</code> এজেন্টদের মধ্যে কাজ ভাগ করে এবং রাউটিং করে।</li>
+        </ol>
+        <p style="margin-top:8px">সার্ভার রান করে <strong>Express.js</strong>-এর উপর (port 3000), এবং <code>POST /api/chat</code> এন্ডপয়েন্টের মাধ্যমে সব এজেন্টের সাথে যোগাযোগ করা যায়।</p>
+
+        <h2>🤖 ৫টি এজেন্ট</h2>
+        <div class="grid">
+            <div class="agent-card">
+                <h4>🏗️ Solution Architect</h4>
+                <p>সিস্টেম ডিজাইন, আর্কিটেকচার, স্কেলেবিলিটি, API ডিজাইন, ডাটাবেজ স্ট্র্যাটেজি</p>
+                <span class="model-badge">Model: big-pickle</span>
+            </div>
+            <div class="agent-card">
+                <h4>💻 Development Engineer</h4>
+                <p>কোড ইমপ্লিমেন্টেশন, বাগ ফিক্সিং, রিফ্যাক্টরিং, API ইমপ্লিমেন্টেশন</p>
+                <span class="model-badge">Model: north-mini-code-free</span>
+            </div>
+            <div class="agent-card">
+                <h4>🛡️ QA Agent</h4>
+                <p>টেস্টিং, ভ্যালিডেশন, রিগ্রেশন টেস্টিং, ডিফেক্ট অ্যানালাইসিস</p>
+                <span class="model-badge">Model: mimo-v2.5-free</span>
+            </div>
+            <div class="agent-card">
+                <h4>📚 Documentation</h4>
+                <p>টেকনিক্যাল ডকুমেন্টেশন, API ডক্স, ইউজার গাইড, রানবুক</p>
+                <span class="model-badge">Model: big-pickle</span>
+            </div>
+            <div class="agent-card">
+                <h4>⚙️ Operations</h4>
+                <p>ডিপ্লয়মেন্ট, মনিটরিং, ইন্সিডেন্ট রেসপন্স, ব্যাকআপ</p>
+                <span class="model-badge">Model: nemotron-3-ultra-free</span>
+            </div>
+        </div>
+
+        <h2>🔧 কনফিগারেশন</h2>
+        <p>সব কনফিগারেশন <code>.env</code> ফাইল থেকে লোড হয়। নিচের ভেরিয়েবলগুলো ব্যবহার করে প্রতিটি এজেন্টের প্রোভাইডার, URL, API key, এবং মডেল আলাদাভাবে সেট করা যায়:</p>
+
+        <table>
+            <tr><th>Env Variable</th><th>Description</th><th>Example</th></tr>
+            <tr><td><code>LLM_PROVIDER</code></td><td>Default provider (opencode / universal)</td><td><code>opencode</code></td></tr>
+            <tr><td><code>LLM_BASE_URL</code></td><td>Default base URL</td><td><code>https://opencode.ai/zen/v1</code></td></tr>
+            <tr><td><code>LLM_API_KEY</code></td><td>Default API key</td><td><code>sk-xxx</code></td></tr>
+            <tr><td><code>LLM_MODEL</code></td><td>Default model</td><td><code>deepseek-v4-flash-free</code></td></tr>
+            <tr><td><code>AGENT_&lt;ROLE&gt;_PROVIDER</code></td><td>Per-agent provider override</td><td><code>AGENT_QUALITY_ASSURANCE_PROVIDER=opencode</code></td></tr>
+            <tr><td><code>AGENT_&lt;ROLE&gt;_BASE_URL</code></td><td>Per-agent URL override</td><td><code>AGENT_ARCHITECT_BASE_URL=http://localhost:5010/v1</code></td></tr>
+            <tr><td><code>AGENT_&lt;ROLE&gt;_API_KEY</code></td><td>Per-agent API key override</td><td><code>AGENT_OPS_API_KEY=key-xxx</code></td></tr>
+            <tr><td><code>AGENT_&lt;ROLE&gt;_MODEL</code></td><td>Per-agent model override</td><td><code>AGENT_DEVELOPMENT_ENGINEER_MODEL=north-mini-code-free</code></td></tr>
+        </table>
+        <p style="margin-top:8px"><code>&lt;ROLE&gt;</code> হলো এজেন্টের role নাম uppercase এবং underscores-এ: <code>SOLUTION_ARCHITECT</code>, <code>DEVELOPMENT_ENGINEER</code>, <code>QUALITY_ASSURANCE</code>, <code>DOCUMENTATION</code>, <code>OPERATIONS</code>।</p>
+
+        <h3>বর্তমান কনফিগারেশন (OpenCode Zen Free Models)</h3>
+        <table>
+            <tr><th>Agent</th><th>Provider</th><th>Model</th></tr>
+            <tr><td>Solution Architect</td><td>opencode</td><td>big-pickle</td></tr>
+            <tr><td>Development Engineer</td><td>opencode</td><td>north-mini-code-free</td></tr>
+            <tr><td>Quality Assurance</td><td>opencode</td><td>mimo-v2.5-free</td></tr>
+            <tr><td>Documentation</td><td>opencode</td><td>big-pickle</td></tr>
+            <tr><td>Operations</td><td>opencode</td><td>nemotron-3-ultra-free</td></tr>
+            <tr><td>Default (fallback)</td><td>opencode</td><td>deepseek-v4-flash-free</td></tr>
+        </table>
+
+        <h2>🌐 API এন্ডপয়েন্ট</h2>
+
+        <h3>POST /api/chat</h3>
+        <p>যেকোনো এজেন্টের সাথে চ্যাট করুন।</p>
+        <pre>curl -X POST http://localhost:3000/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Hello","agentType":"qa"}'</pre>
+
+        <table>
+            <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+            <tr><td><code>message</code></td><td>string</td><td>Required — আপনার মেসেজ</td></tr>
+            <tr><td><code>agentType</code></td><td>string</td><td>এজেন্ট সিলেক্ট করুন: <code>architect</code>, <code>developer</code>, <code>qa</code>, <code>docs</code>, <code>ops</code></td></tr>
+        </table>
+
+        <h4>Response:</h4>
+        <pre>{
+  "success": true,
+  "data": {
+    "response": {
+      "text": "এজেন্টের উত্তর...",
+      "toolCalls": []  // optional
+    },
+    "steps": 1
+  },
+  "identity": {
+    "name": "ZombieCoder",
+    "owner": "Sahon Srabon"
+  }
+}</pre>
+
+        <h3>GET /api/identity</h3>
+        <p>সিস্টেম আইডেন্টিটি তথ্য দেখায়।</p>
+        <pre>curl http://localhost:3000/api/identity</pre>
+
+        <h2>🚀 রান করার উপায়</h2>
+        <pre># Install dependencies
+npm install
+
+# Build TypeScript
+npm run build
+
+# Start server
+node dist/server.js
+
+# অথবা ডেভেলপমেন্ট মোডে:
+npm run dev</pre>
+        <p>সার্ভার স্টার্ট হলে <code>http://localhost:3000</code> এ UI ওপেন হবে।</p>
+
+        <h2>🔌 প্রোভাইডার পরিবর্তন</h2>
+        <p><code>.env</code> ফাইল এডিট করলেই যেকোনো এজেন্টের প্রোভাইডার পরিবর্তন করা যায়। উদাহরণ:</p>
+
+        <h3>Ollama লোকাল মডেল ব্যবহার:</h3>
+        <pre>LLM_PROVIDER=universal
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=qwen2.5-coder:3b</pre>
+
+        <h3>মিক্সড কনফিগারেশন:</h3>
+        <pre># কোডিংয়ের জন্য OpenCode Zen, বাকি কাজের জন্য লোকাল
+AGENT_DEVELOPMENT_ENGINEER_PROVIDER=opencode
+AGENT_DEVELOPMENT_ENGINEER_MODEL=north-mini-code-free
+
+AGENT_QUALITY_ASSURANCE_PROVIDER=universal
+AGENT_QUALITY_ASSURANCE_BASE_URL=http://localhost:5010/v1
+AGENT_QUALITY_ASSURANCE_MODEL=llama3.2:1b</pre>
+
+        <h2>📁 প্রজেক্ট স্ট্রাকচার</h2>
+        <pre>├── server.ts              # Express সার্ভার
+├── src/
+│   ├── index.ts            # Main entry / exports
+│   ├── agents/
+│   │   ├── core/
+│   │   │   ├── BaseAgent.ts    # Base class
+│   │   │   └── AgentLoop.ts    # LLM execution loop
+│   │   ├── specialists/        # 5 specialist agents
+│   │   └── MultiAgentOrchestrator.ts
+│   ├── llm-providers/
+│   │   └── LLMGateway.ts       # Provider routing
+│   ├── types/
+│   │   └── agent.ts            # Types + getAgentEnvConfig()
+│   ├── config/
+│   │   └── identity.ts         # Identity system
+│   └── utils/
+│       └── responseNormalizer.ts
+├── public/index.html       # Web UI
+├── docs/index.html         # এই ডকুমেন্টেশন
+└── .env                    # সব কনফিগারেশন</pre>
+
+        <hr>
+
+        <div class="card" style="text-align:center">
+            <p style="font-size:0.9rem">ZombieCoder — Proprietary — Local Freedom Protocol</p>
+            <p style="font-size:0.8rem; margin-top:4px">Owner: <strong>Sahon Srabon</strong> | Developer Zone, 235 South Pirarbag, Amtala Bazar, Mirpur, Dhaka, Bangladesh</p>
+            <p style="font-size:0.8rem">📧 infi@zombiecoder.my.id | 🌐 https://zombiecoder.my.id | 📞 +880 1323-626282</p>
+        </div>
+
+        <div class="footer">
+            Documentation generated from source code — always reflects current implementation
+        </div>
+    </div>
+</body>
+</html>

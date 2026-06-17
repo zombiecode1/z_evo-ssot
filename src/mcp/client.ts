@@ -9,7 +9,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import path from 'path';
+import { resolveMcpServerLaunch } from './entry-resolver';
 
 let mcpClient: Client | null = null;
 let mcpTransport: StdioClientTransport | null = null;
@@ -20,15 +20,14 @@ let discoveredTools: any[] = [];
  */
 export async function connectMcpServer(): Promise<void> {
   try {
-    // Path to the compiled MCP server entry point
-    const serverEntryPath = path.join(__dirname, 'server-entry.js');
-    
-    console.log(`🔧 Starting MCP server: ${serverEntryPath}`);
+    const launch = resolveMcpServerLaunch();
+
+    console.log(`🔧 Starting MCP server: ${launch.entryPath} (${launch.mode})`);
 
     // Create transport that spawns the server as a child process
     mcpTransport = new StdioClientTransport({
-      command: process.execPath, // node executable
-      args: [serverEntryPath],
+      command: launch.command,
+      args: launch.args,
     });
 
     mcpClient = new Client({

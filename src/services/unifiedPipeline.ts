@@ -23,7 +23,7 @@
  */
 
 import { generateText, streamText, type ModelMessage, type Tool, jsonSchema } from 'ai';
-import { getLanguageModel, getReasoningModel, resolveModelId } from '../providers/ai-sdk-registry';
+import { getLanguageModel, getReasoningModel, resolveModelId, getRegisteredProviderIds } from '../providers/ai-sdk-registry';
 import { getIdentity } from './identityService';
 import { DiskRAGService } from './ragService';
 import { VectorIndexService } from './vectorIndexService';
@@ -149,6 +149,215 @@ let _vectorIndexService: VectorIndexService | null = null;
 let _mawlanaRouter: MawlanaRouter | null = null;
 let _groqService: GroqService | null = null;
 
+const FALLBACK_MODEL_POOLS: Record<string, string[]> = {
+  opencode: [
+    'mimo-v2.5-free',
+    'deepseek-v4-flash-free',
+    'big-pickle',
+    'nemotron-3-ultra-free',
+  ],
+  groq: [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'qwen/qwen3-32b',
+    'openai/gpt-oss-20b',
+    'groq/compound-mini',
+  ],
+  openai: [
+    'gpt-4o-mini',
+    'gpt-4.1-mini',
+  ],
+  gemini: [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+  ],
+  anthropic: [
+    'claude-haiku-4-5',
+  ],
+};
+
+function normalizeTextContent(content: any): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object') {
+          return String(part.text || part.content || '');
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+  }
+  if (content && typeof content === 'object') {
+    return String(content.text || content.content || '');
+  }
+  return '';
+}
+
+function mergeSystemPrompts(...parts: Array<string | undefined | null>): string {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+
+  for (const part of parts) {
+    const text = String(part || '').trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    merged.push(text);
+  }
+
+  return merged.join('\n\n');
+}
+
+function separateSystemMessages(messages: ModelMessage[]): { systemMessages: string[]; messages: ModelMessage[] } {
+  const systemMessages: string[] = [];
+  const filtered: ModelMessage[] = [];
+
+  for (const message of messages) {
+    if (message.role === 'system') {
+      const text = normalizeTextContent(message.content);
+      if (text) systemMessages.push(text);
+      continue;
+    }
+    filtered.push(message);
+  }
+
+  return { systemMessages, messages: filtered };
+}
+
+function buildPromptContext(
+  inputMessages: ModelMessage[],
+  inputSystemPrompt?: string,
+): { systemPrompt: string; messages: ModelMessage[] } {
+  const { systemMessages, messages } = separateSystemMessages(inputMessages);
+  const identityPrompt = (() => {
+    try {
+      const identity = getIdentity();
+      return identity?.system_identity?.system_prompt || 'You are ZombieCoder, a helpful AI assistant.';
+    } catch {
+      return 'You are ZombieCoder, a helpful AI assistant.';
+    }
+  })();
+  const mergedSystemPrompt = mergeSystemPrompts(identityPrompt, inputSystemPrompt, ...systemMessages);
+
+  return { systemPrompt: mergedSystemPrompt, messages };
+}
+
+function buildFallbackModelCandidates(modelId: string): string[] {
+  const providers = new Set(getRegisteredProviderIds());
+  const candidateIds: string[] = [];
+  const pushCandidate = (candidate: string) => {
+    if (candidate && !candidateIds.includes(candidate)) {
+      candidateIds.push(candidate);
+    }
+  };
+
+  pushCandidate(modelId);
+
+  const [provider] = modelId.includes(':') ? modelId.split(':', 2) : ['opencode'];
+  const providerOrder = [provider, 'opencode', 'groq', 'openai', 'gemini', 'anthropic'];
+
+  for (const providerId of providerOrder) {
+    if (!providerId || !providers.has(providerId)) continue;
+    const pool = FALLBACK_MODEL_POOLS[providerId];
+    if (!pool) continue;
+    for (const model of pool) {
+      pushCandidate(`${providerId}:${model}`);
+    }
+  }
+
+  return candidateIds;
+}
+
+function isRetryableModelError(err: any): boolean {
+  const status = Number(err?.statusCode || err?.status || err?.response?.status || 0);
+  if ([401, 403, 404, 408, 409, 429].includes(status)) return true;
+
+  const message = String(err?.message || '').toLowerCase();
+  return (
+    message.includes('unauthorized') ||
+    message.includes('forbidden') ||
+    message.includes('not found') ||
+    message.includes('model_not_found') ||
+    message.includes('rate limit')
+  );
+}
+
+async function generateTextWithFallback(generateParams: any, primaryModelId: string) {
+  const candidates = buildFallbackModelCandidates(primaryModelId);
+  let lastError: any = null;
+
+  for (const candidate of candidates) {
+    const model = candidate.includes('deepseek') || candidate.includes('r1')
+      ? getReasoningModel(candidate)
+      : getLanguageModel(candidate);
+
+    try {
+      const result = await generateText({
+        ...generateParams,
+        model,
+      });
+
+      return { result, modelId: candidate, fallbackUsed: candidate !== primaryModelId };
+    } catch (err: any) {
+      lastError = err;
+      if (!isRetryableModelError(err)) {
+        throw err;
+      }
+      console.warn(`↩️ Model failed, trying fallback: ${candidate} -> ${err?.message || err}`);
+    }
+  }
+
+  throw lastError || new Error('All model fallbacks failed');
+}
+
+function streamTextWithFallback(streamParams: any, primaryModelId: string) {
+  const candidates = buildFallbackModelCandidates(primaryModelId);
+  const state = { modelId: primaryModelId };
+
+  async function* streamGenerator() {
+    let lastError: any = null;
+
+    for (const candidate of candidates) {
+      const model = candidate.includes('deepseek') || candidate.includes('r1')
+        ? getReasoningModel(candidate)
+        : getLanguageModel(candidate);
+      let yielded = false;
+
+      try {
+        const result = streamText({
+          ...streamParams,
+          model,
+        });
+
+        state.modelId = candidate;
+
+        for await (const chunk of result.textStream) {
+          yielded = true;
+          yield chunk;
+        }
+
+        return;
+      } catch (err: any) {
+        lastError = err;
+        if (state.modelId === candidate && yielded) {
+          throw err;
+        }
+        if (!isRetryableModelError(err)) {
+          throw err;
+        }
+        console.warn(`↩️ Stream model failed, trying fallback: ${candidate} -> ${err?.message || err}`);
+      }
+    }
+
+    throw lastError || new Error('All stream model fallbacks failed');
+  }
+
+  return { state, stream: streamGenerator() };
+}
+
 /**
  * Initialize the pipeline with required services.
  * Called once during server startup.
@@ -183,12 +392,12 @@ function injectIdentity(basePrompt: string): string {
 
 // ─── Middleware: RAG Context Injection ─────────────────────────
 
-async function injectRagContext(
+async function collectRagContext(
   messages: ModelMessage[],
   directory?: string,
   workspaceId?: string,
-): Promise<ModelMessage[]> {
-  if (!_ragService || !directory) return messages;
+): Promise<string> {
+  if (!_ragService || !directory) return '';
 
   try {
     // Ensure SSOT exists (self-healing)
@@ -227,19 +436,12 @@ async function injectRagContext(
       ragContext = _ragService.searchSSOT(query);
     }
 
-    if (ragContext) {
-      // Inject as system message before the last user message
-      const sysMsg: ModelMessage = {
-        role: 'system',
-        content: `Project context (RAG):\n${ragContext}`,
-      };
-      return [...messages.slice(0, -1), sysMsg, messages[messages.length - 1]];
-    }
+    return ragContext ? `Project context (RAG):\n${ragContext}` : '';
   } catch (e: any) {
     console.warn('RAG injection failed:', e?.message || e);
   }
 
-  return messages;
+  return '';
 }
 
 // ─── Middleware: Conversation History ──────────────────────────
@@ -282,34 +484,34 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
   const startTime = Date.now();
 
   // 1. Build system prompt with identity
-  let systemPrompt = input.systemPrompt || 'You are ZombieCoder, a helpful AI assistant.';
-  systemPrompt = injectIdentity(systemPrompt);
+  const prepared = buildPromptContext(
+    input.messages.map(m => ({
+      role: m.role as 'system' | 'user' | 'assistant',
+      content: String(m.content || ''),
+    })),
+    input.systemPrompt,
+  );
+  const systemPrompt = prepared.systemPrompt;
 
   // 2. Convert messages to ModelMessage format
-  let coreMessages: ModelMessage[] = input.messages.map(m => ({
-    role: m.role as 'system' | 'user' | 'assistant',
-    content: m.content,
-  }));
+  let coreMessages: ModelMessage[] = prepared.messages;
 
   // 3. Load conversation history
   coreMessages = await loadConversationHistory(coreMessages, input.conversationId);
 
-  // 4. Inject RAG context (if enabled)
+  // 4. Inject RAG context into system prompt only
+  let ragContext = '';
   if (input.enableRag !== false && input.directory) {
-    coreMessages = await injectRagContext(coreMessages, input.directory, input.workspaceId);
+    ragContext = await collectRagContext(coreMessages, input.directory, input.workspaceId);
   }
 
   // 5. Resolve model ID
   const modelId = resolveModelId(input.model);
 
-  // 6. Use reasoning model for reasoning-capable models (DeepSeek, etc.)
-  const isReasoningModel = modelId.includes('deepseek') || modelId.includes('r1');
-  const model = isReasoningModel ? getReasoningModel(modelId) : getLanguageModel(modelId);
-
-  // 7. Convert tools (OpenAI format → AI SDK format)
+  // 6. Convert tools (OpenAI format → AI SDK format)
   const toolConfig = convertTools(input.tools, input.tool_choice);
 
-  // 7b. Load MCP tools if enableTools is true (agent endpoint)
+  // 6b. Load MCP tools if enableTools is true (agent endpoint)
   let mcpToolConfig: { tools?: Record<string, Tool<any, any>> } | undefined;
   if (input.enableTools && !toolConfig) {
     const mcpTools = await loadMcpToolsForPipeline();
@@ -318,11 +520,10 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
     }
   }
 
-  // 8. Call AI SDK generateText (Provider Truth)
+  // 7. Call AI SDK generateText (Provider Truth)
   const generateParams: any = {
-    model,
     messages: coreMessages,
-    system: systemPrompt,
+    system: [systemPrompt, ragContext].filter(Boolean).join('\n\n'),
     maxOutputTokens: input.maxOutputTokens || 4096,
     temperature: input.temperature ?? 0.7,
   };
@@ -341,14 +542,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
     generateParams.maxSteps = input.maxSteps || 10;
   }
 
-  const result = await generateText(generateParams);
+  const generated = await generateTextWithFallback(generateParams, modelId);
+  const result = generated.result;
 
-  // 9. Build OpenAI-compatible response (reasoning content PRESERVED)
+  // 8. Build OpenAI-compatible response (reasoning content PRESERVED)
   const output: PipelineOutput = {
     id: `chatcmpl-${crypto.randomUUID().slice(0, 12)}`,
     object: 'chat.completion',
     created: Math.floor(Date.now() / 1000),
-    model: modelId,
+    model: generated.modelId,
     choices: [{
       index: 0,
       message: {
@@ -397,7 +599,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
   }
 
   const durationMs = Date.now() - startTime;
-  console.log(`✅ Pipeline: model=${modelId}, tokens=${output.usage.total_tokens}, ${durationMs}ms`);
+  console.log(`✅ Pipeline: model=${generated.modelId}, tokens=${output.usage.total_tokens}, ${durationMs}ms${generated.fallbackUsed ? ' (fallback)' : ''}`);
 
   return output;
 }
@@ -408,27 +610,29 @@ export async function runStreamingPipeline(
   input: PipelineInput,
 ): Promise<StreamPipelineOutput> {
   // 1. Build system prompt with identity
-  let systemPrompt = input.systemPrompt || 'You are ZombieCoder, a helpful AI assistant.';
-  systemPrompt = injectIdentity(systemPrompt);
+  const prepared = buildPromptContext(
+    input.messages.map(m => ({
+      role: m.role as 'system' | 'user' | 'assistant',
+      content: String(m.content || ''),
+    })),
+    input.systemPrompt,
+  );
+  const systemPrompt = prepared.systemPrompt;
 
   // 2. Convert messages
-  let coreMessages: ModelMessage[] = input.messages.map(m => ({
-    role: m.role as 'system' | 'user' | 'assistant',
-    content: m.content,
-  }));
+  let coreMessages: ModelMessage[] = prepared.messages;
 
   // 3. Load conversation history
   coreMessages = await loadConversationHistory(coreMessages, input.conversationId);
 
-  // 4. Inject RAG context
+  // 4. Inject RAG context into system prompt only
+  let ragContext = '';
   if (input.enableRag !== false && input.directory) {
-    coreMessages = await injectRagContext(coreMessages, input.directory, input.workspaceId);
+    ragContext = await collectRagContext(coreMessages, input.directory, input.workspaceId);
   }
 
   // 5. Resolve model
   const modelId = resolveModelId(input.model);
-  const isReasoningModel = modelId.includes('deepseek') || modelId.includes('r1');
-  const model = isReasoningModel ? getReasoningModel(modelId) : getLanguageModel(modelId);
 
   // 6. Convert tools (OpenAI format → AI SDK format)
   const toolConfig = convertTools(input.tools, input.tool_choice);
@@ -444,9 +648,8 @@ export async function runStreamingPipeline(
 
   // 7. Call AI SDK streamText (Provider Truth — single call, no double-call)
   const streamParams: any = {
-    model,
     messages: coreMessages,
-    system: systemPrompt,
+    system: [systemPrompt, ragContext].filter(Boolean).join('\n\n'),
     maxOutputTokens: input.maxOutputTokens || 4096,
     temperature: input.temperature ?? 0.7,
   };
@@ -463,13 +666,13 @@ export async function runStreamingPipeline(
     streamParams.maxSteps = input.maxSteps || 10;
   }
 
-  const result = streamText(streamParams);
+  const fallbackStream = streamTextWithFallback(streamParams, modelId);
 
   return {
     id: `chatcmpl-${crypto.randomUUID().slice(0, 12)}`,
-    model: modelId,
-    stream: result.textStream,
-    fullStream: result.fullStream,
+    model: fallbackStream.state.modelId,
+    stream: fallbackStream.stream,
+    fullStream: undefined,
     conversation_id: input.conversationId,
   };
 }

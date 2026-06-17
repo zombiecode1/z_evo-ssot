@@ -101,6 +101,9 @@ export function savePersonaToDb(): void {
         // Save system prompt
         setRuntimeConfig(db, 'persona:system_prompt', buildSystemPrompt(p), 'persona');
 
+        // Refresh in-memory identity so the current process uses the updated prompt immediately.
+        loadIdentity(true);
+
         console.log('✅ Persona saved to DB');
     } catch (err: any) {
         console.warn('⚠️ Failed to save persona to DB:', err?.message || err);

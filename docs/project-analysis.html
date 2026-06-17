@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZombieCoder Agent Module — সম্পূর্ণ প্রজেক্ট বিশ্লেষণ ও সমস্যা চিহ্নিতকরণ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #0b1121;
+            --card: #1a2332;
+            --card-hover: #1e293b;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --border: #2d3a4e;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            --critical: #dc2626;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Noto Sans Bengali', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        /* ─── Navigation ─── */
+        .nav-top {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(11, 17, 33, 0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            height: 60px;
+            gap: 16px;
+        }
+        .nav-top .brand {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary);
+            white-space: nowrap;
+        }
+        .nav-top .brand span { color: var(--text-dim); font-weight: 400; }
+        .nav-top .nav-links {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            flex: 1;
+            padding: 0 8px;
+            scrollbar-width: none;
+        }
+        .nav-top .nav-links::-webkit-scrollbar { display: none; }
+        .nav-top .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.78rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+        .nav-top .nav-links a:hover, .nav-top .nav-links a.active {
+            background: var(--primary);
+            color: #fff;
+        }
+        .nav-top .version-badge {
+            font-size: 0.7rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 8px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            padding: 100px 24px 60px;
+            text-align: center;
+            background: linear-gradient(180deg, #0b1121 0%, #111827 40%, #0b1121 100%);
+            border-bottom: 1px solid var(--border);
+        }
+        .hero h1 {
+            font-size: 2.4rem;
+            background: linear-gradient(135deg, #818cf8, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .hero .subtitle {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto 16px;
+        }
+        .hero .meta-info {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        .hero .meta-info span { display: flex; align-items: center; gap: 6px; }
+        .hero .badge-critical {
+            background: rgba(239,68,68,0.15);
+            color: var(--error);
+            padding: 2px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+
+        /* ─── Layout ─── */
+        .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+        section { padding: 48px 0; border-bottom: 1px solid var(--border); }
+        section:last-of-type { border-bottom: none; }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h2 .count-badge {
+            font-size: 0.7rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 2px 10px;
+            border-radius: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        h3 {
+            font-size: 1.05rem;
+            color: var(--text);
+            margin: 24px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h4 {
+            font-size: 0.95rem;
+            color: var(--text);
+            margin: 16px 0 8px;
+        }
+        p { color: var(--text-muted); margin-bottom: 12px; }
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* ─── Cards ─── */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 16px;
+            transition: border-color 0.15s;
+        }
+        .card:hover { border-color: var(--primary); }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            gap: 12px;
+        }
+        .card-header .title { font-weight: 600; color: var(--text); font-size: 0.95rem; }
+        .card-header .badge {
+            font-size: 0.65rem;
+            padding: 3px 10px;
+            border-radius: 10px;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        .badge-critical { background: rgba(239,68,68,0.15); color: var(--error); border: 1px solid rgba(239,68,68,0.3); }
+        .badge-high { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+        .badge-medium { background: rgba(59,130,246,0.15); color: var(--info); border: 1px solid rgba(59,130,246,0.3); }
+        .badge-low { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+        .badge-info { background: rgba(99,102,241,0.15); color: var(--primary); border: 1px solid rgba(99,102,241,0.3); }
+        .card-body { font-size: 0.9rem; color: var(--text-muted); }
+        .card-body .file-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--warning);
+        }
+        .card-body ul, .card-body ol { padding-left: 20px; margin: 8px 0; }
+        .card-body li { margin-bottom: 6px; }
+        .card-body code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: rgba(0,0,0,0.3);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: #7ee787;
+        }
+        .card-body .impact {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin: 4px 0;
+        }
+        .impact-high { background: rgba(239,68,68,0.1); color: var(--error); }
+        .impact-medium { background: rgba(245,158,11,0.1); color: var(--warning); }
+
+        /* ─── Grid ─── */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        @media (max-width: 900px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+
+        /* ─── Stats ─── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            text-align: center;
+        }
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .stat-card .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .stat-card .sub-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        /* ─── Table ─── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 12px 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background: var(--card);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(99,102,241,0.04); }
+
+        /* ─── Status Indicators ─── */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .status-dot.green { background: var(--success); }
+        .status-dot.yellow { background: var(--warning); }
+        .status-dot.red { background: var(--error); }
+        .status-dot.blue { background: var(--info); }
+
+        /* ─── Progress Bar ─── */
+        .progress-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s;
+        }
+        .fill-green { background: var(--success); }
+        .fill-yellow { background: var(--warning); }
+        .fill-red { background: var(--error); }
+        .fill-blue { background: var(--info); }
+
+        /* ─── Timeline ─── */
+        .timeline { position: relative; padding-left: 28px; }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 6px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 2px solid var(--bg);
+        }
+        .timeline-item .t-time {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .timeline-item .t-title {
+            font-weight: 600;
+            color: var(--text);
+            margin: 2px 0 4px;
+        }
+        .timeline-item .t-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* ─── Code ─── */
+        pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            line-height: 1.6;
+            color: #c9d1d9;
+            margin: 12px 0;
+        }
+        pre .comment { color: #8b949e; }
+        pre .keyword { color: #ff7b72; }
+        pre .string { color: #a5d6ff; }
+        pre .func { color: #d2a8ff; }
+
+        /* ─── Tags ─── */
+        .tag {
+            display: inline-block;
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin: 2px;
+            font-weight: 500;
+        }
+        .tag-ts { background: rgba(49,120,198,0.15); color: #3178c6; }
+        .tag-node { background: rgba(104,159,56,0.15); color: #689f38; }
+        .tag-db { background: rgba(0,118,255,0.15); color: #0076ff; }
+        .tag-ai { background: rgba(255,152,0,0.15); color: #ff9800; }
+        .tag-doc { background: rgba(156,39,176,0.15); color: #9c27b0; }
+        .tag-security { background: rgba(239,68,68,0.15); color: var(--error); }
+
+        /* ─── Summary Box ─── */
+        .summary-box {
+            background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(52,211,153,0.08));
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+        .summary-box h3 { color: var(--primary); margin-top: 0; }
+        .summary-box p { margin-bottom: 8px; }
+
+        /* ─── Footer ─── */
+        footer {
+            padding: 40px 24px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            background: var(--bg);
+        }
+        footer .owner {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        footer .contact {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        footer .contact a { color: var(--primary); }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 1.6rem; }
+            .nav-top { padding: 0 12px; gap: 8px; }
+            .nav-top .brand { font-size: 0.9rem; }
+            .nav-top .nav-links a { font-size: 0.7rem; padding: 4px 8px; }
+            .container { padding: 0 16px; }
+            section { padding: 32px 0; }
+            .card { padding: 16px; }
+        }
+
+        /* ─── Print ─── */
+        @media print {
+            .nav-top { display: none; }
+            .hero { padding-top: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav class="nav-top">
+    <div class="brand">ZombieCoder <span>| Analysis</span></div>
+    <div class="nav-links">
+        <a href="#overview">পরিচিতি</a>
+        <a href="#structure">স্ট্রাকচার</a>
+        <a href="#issues-critical">সমস্যা</a>
+        <a href="#code-quality">কোড কোয়ালিটি</a>
+        <a href="#security">নিরাপত্তা</a>
+        <a href="#updates">প্রয়োজনীয় আপডেট</a>
+        <a href="#roadmap">রোডম্যাপ</a>
+    </div>
+    <div class="version-badge">v2.0.0</div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+    <h1>🧟 ZombieCoder Agent Module</h1>
+    <p class="subtitle">সম্পূর্ণ প্রজেক্ট বিশ্লেষণ — সমস্যা, প্রয়োজনীয় আপডেট, এবং সমাধানের পথনির্দেশিকা</p>
+    <div class="meta-info">
+        <span>👤 Sahon Srabon</span>
+        <span>🏢 Developer Zone, Dhaka, Bangladesh</span>
+        <span>📅 2026-06-16</span>
+        <span class="badge-critical">🔴 ১০টি Critical Issue</span>
+    </div>
+</section>
+
+<div class="container">
+
+<!-- ═══ 1. OVERVIEW ═══ -->
+<section id="overview">
+    <h2>📋 ১. প্রজেক্ট পরিচিতি ও বর্তমান অবস্থা</h2>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="number">6,847</div>
+            <div class="label">মোট লাইনের কোড (approx)</div>
+            <div class="sub-label">TypeScript + HTML + CSS + JS</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">38</div>
+            <div class="label">মোট ফাইল</div>
+            <div class="sub-label">Source + Config + Docs + Scripts</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">5</div>
+            <div class="label">AI এজেন্ট</div>
+            <div class="sub-label">Architect, Developer, QA, Docs, Ops</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">6</div>
+            <div class="label">টুল</div>
+            <div class="sub-label">read, write, list, exec, fetch, search</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">9</div>
+            <div class="label">Critical Issues</div>
+            <div class="sub-label">অবিলম্বে সমাধান প্রয়োজন</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">12</div>
+            <div class="label">Improvements</div>
+            <div class="sub-label">মাঝারি অগ্রাধিকার</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">📌 প্রজেক্ট সারাংশ</span>
+            <span class="badge badge-info">Overview</span>
+        </div>
+        <div class="card-body">
+            <p><strong>ZombieCoder Agent Module v2.0.0</strong> একটি মাল্টি-এজেন্ট AI সিস্টেম যা ৫টি ভিন্ন বিশেষায়িত AI এজেন্ট নিয়ে কাজ করে। এটি Vercel AI SDK v6 এবং OpenCode Zen ফ্রি মডেলের উপর ভিত্তি করে তৈরি। প্রতিটি এজেন্টের আলাদা ভূমিকা, system prompt এবং টুল পারমিশন রয়েছে।</p>
+            <p><strong>টেক স্ট্যাক:</strong></p>
+            <p>
+                <span class="tag tag-ts">TypeScript 5.9</span>
+                <span class="tag tag-node">Node.js 20+</span>
+                <span class="tag tag-node">Express.js 5</span>
+                <span class="tag tag-ai">Vercel AI SDK v6</span>
+                <span class="tag tag-db">SQLite (better-sqlite3)</span>
+                <span class="tag tag-ai">LangChain</span>
+                <span class="tag tag-doc">Zod Validation</span>
+            </p>
+        </div>
+    </div>
+
+    <div class="summary-box">
+        <h3>🎯 মূল কার্যক্রম</h3>
+        <p>✅ <strong>সম্পন্ন:</strong> ৫টি স্পেশালিস্ট এজেন্ট, টুল ডেফিনিশন (৬টি), পার-এজেন্ট পারমিশন, টুল-কলিং লুপ, এনভ-ভিত্তিক কনফিগারেশন, CORS সাপোর্ট, OpenAI-কম্প্যাটিবল API, স্ট্রিমিং, SPA UI, TypeScript বিল্ড</p>
+        <p>❌ <strong>অসম্পূর্ণ/সমস্যা:</strong> ডকুমেন্টেশন আপডেট নয়, ডেড কোড, মিসিং স্পেশালিস্ট ফাইল, টেস্ট নেই, CI/CD নেই, সিকিউরিটি ফাঁক</p>
+    </div>
+</section>
+
+<!-- ═══ 2. STRUCTURE ═══ -->
+<section id="structure">
+    <h2>📁 ২. ডিরেক্টরি স্ট্রাকচার বিশ্লেষণ</h2>
+
+    <div class="grid-2">
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="title">✅ সঠিক ফাইল/ফোল্ডার</span>
+                    <span class="badge badge-low">Working</span>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li><code class="file-path">server.ts</code> — প্রধান সার্ভার (কার্যকর)</li>
+                        <li><code class="file-path">src/agents/agentFactory.ts</code> — এজেন্ট ফ্যাক্টরি (কার্যকর)</li>
+                        <li><code class="file-path">src/agents/core/*.ts</code> — BaseAgent + AgentLoop (কার্যকর)</li>
+                        <li><code class="file-path">src/agents/tools/index.ts</code> — টুল ডেফিনিশন (কার্যকর)</li>
+                        <li><code class="file-path">src/db/database.ts</code> — SQLite DB (কার্যকর)</li>
+                        <li><code class="file-path">src/llm-providers/LLMGateway.ts</code> — LLM গেটওয়ে (কার্যকর)</li>
+                        <li><code class="file-path">src/types/agent.ts</code> — টাইপ ডেফিনিশন (কার্যকর)</li>
+                        <li><code class="file-path">public/index.html</code> — SPA UI (কার্যকর)</li>
+                        <li><code class="file-path">docs/system-prompt.md</code> — SSOT (কার্যকর)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="title">❌ সমস্যাযুক্ত ফাইল/ফোল্ডার</span>
+                    <span class="badge badge-critical">Issues</span>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li><code class="file-path">src/agents/specialists/</code> — <strong>ডিরেক্টরিটি নেই!</strong> কিন্তু scripts এখনও ইম্পোর্ট করে</li>
+                        <li><code class="file-path">src/config/identity.ts</code> — <strong>ফাইল নেই!</strong> কিন্তু docs এখনও রেফারেন্স করে</li>
+                        <li><code class="file-path">src/config/</code> — <strong>পুরো ডিরেক্টরি খালি!</strong></li>
+                        <li><code class="file-path">docs/index.html</code> — পুরনো মডেল নাম ও পাথ রেফারেন্স</li>
+                        <li><code class="file-path">docs/README.md</code> — পুরনো API ডকুমেন্টেশন</li>
+                        <li><code class="file-path">docs/README_BN.md</code> — পুরনো নির্দেশিকা</li>
+                        <li><code class="file-path">scripts/run_agent_checks.*</code> — সবকটি স্ক্রিপ্ট ভাঙ্গা</li>
+                        <li><code class="file-path">utils/mathUtils.ts</code> — এজেন্ট সিস্টেমের সাথে অপ্রাসঙ্গিক</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">🏗️ বর্তমান আর্কিটেকচার ডায়াগ্রাম</span>
+            <span class="badge badge-info">Structure</span>
+        </div>
+        <div class="card-body">
+            <pre>
+┌──────────────────────────────────────────────────────────────┐
+│                    ZombieCoder Agent System                     │
+├──────────────────────────────────────────────────────────────┤
+│  server.ts  ←  Express.js + CORS + API Routes                  │
+├──────────────────────────────────────────────────────────────┤
+│  src/agents/agentFactory.ts  ←  createAgent(), SYSTEM_IDENTITY │
+│    ├── core/BaseAgent.ts     ←  Agent wrapper                  │
+│    ├── core/AgentLoop.ts     ←  generateText() + streamText()  │
+│    └── tools/index.ts        ←  6 tool definitions             │
+├──────────────────────────────────────────────────────────────┤
+│  src/llm-providers/LLMGateway.ts  ←  Model creation            │
+│    ├── OpenCodeProvider.ts        ←  ❌ NOT USED (dead code)    │
+│    └── UniversalLLMProvider.ts    ←  ❌ NOT USED (dead code)    │
+├──────────────────────────────────────────────────────────────┤
+│  src/db/database.ts  ←  SQLite (sessions, personas, logs)      │
+├──────────────────────────────────────────────────────────────┤
+│  src/types/agent.ts  ←  AgentRole, AgentConfig, getAgentEnvConfig│
+├──────────────────────────────────────────────────────────────┤
+│  src/utils/                                                    │
+│    ├── logger.ts              ←  ❌ NOT USED (dead code)        │
+│    └── responseNormalizer.ts  ←  ❌ NOT USED (dead code)        │
+└──────────────────────────────────────────────────────────────┘</pre>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ 3. CRITICAL ISSUES ═══ -->
+<section id="issues-critical">
+    <h2>🔴 ৩. ক্রিটিক্যাল সমস্যা (অবিলম্বে সমাধান প্রয়োজন)</h2>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-1: স্পেশালিস্ট এজেন্ট ফাইল নেই — স্ক্রিপ্ট ভাঙ্গা</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> <code class="file-path">scripts/run_agent_checks.cjs</code>, <code class="file-path">run_agent_checks.mjs</code>, এবং <code class="file-path">run_agent_checks_dist.mjs</code> — তিনটি স্ক্রিপ্টই <code class="file-path">src/agents/specialists/SolutionArchitectAgent.js</code> ইত্যাদি থেকে import করে, কিন্তু এই ফাইলগুলোর অস্তিত্ব নেই।</p>
+            <p><span class="status-dot red"></span> <strong>প্রভাব:</strong> স্ক্রিপ্ট রান করলে <code>MODULE_NOT_FOUND</code> error হবে।</p>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> স্ক্রিপ্টগুলো আপডেট করে <code>agentFactory.ts</code> ব্যবহার করতে হবে, অথবা স্ক্রিপ্টগুলো মুছে ফেলতে হবে।</p>
+            <pre>// পরিবর্তে এইভাবে import করা উচিত:
+import { createAgent } from '../src/agents/agentFactory.js';
+const agent = createAgent('solution-architect');</pre>
+            <p><span class="impact impact-high">🔴 Impact: High</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-2: src/config/identity.ts মিসিং — ডক্সে ভুল রেফারেন্স</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> <code class="file-path">docs/index.html</code> এবং <code class="file-path">README.md</code> এ <code class="file-path">src/config/identity.ts</code> রেফারেন্স করা আছে, কিন্তু এই ফাইলটি বিদ্যমান নেই। আইডেন্টিটি এখন <code class="file-path">src/agents/agentFactory.ts</code> এ সংজ্ঞায়িত। এছাড়াও <code class="file-path">tsconfig.json</code> এ <code>"include": ["config/**/*"]</code> আছে কিন্তু config ডিরেক্টরি খালি।</p>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> ডক্স আপডেট করে সঠিক পাথ উল্লেখ করতে হবে, এবং <code>tsconfig.json</code> থেকে config include সরাতে হবে (বা config ডিরেক্টরি ব্যবহার করতে হবে)।</p>
+            <p><span class="impact impact-high">🔴 Impact: High</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-3: পুরনো ডকুমেন্টেশন (docs/) — ভুল তথ্য</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong></p>
+            <ul>
+                <li><code class="file-path">docs/index.html</code> — পুরনো মডেল নাম ব্যবহার করছে (big-pickle, north-mini-code-free, nemotron-3-ultra-free)</li>
+                <li>বর্তমান <code>.env</code> এ মডেলগুলো ভিন্ন (mimo-v2.5-free, deepseek-v4-flash-free, qwen/qwen3-32b)</li>
+                <li>ডক্সে <code>src/config/identity.ts</code> এবং <code>src/agents/specialists/</code> এর উল্লেখ আছে যা বর্তমানে নেই</li>
+                <li><code>MultiAgentOrchestrator.ts</code> এর উল্লেখ আছে যা আর নেই</li>
+                <li>API এন্ডপয়েন্টের তালিকা অসম্পূর্ণ — <code>/admin/*</code> রুটগুলো উল্লেখ নেই</li>
+                <li><code>docs/README.md</code> এবং <code>docs/README_BN.md</code> — পুরনো API (createZombieCoderAgent) রেফারেন্স করে যা আর নেই</li>
+            </ul>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> সম্পূর্ণ ডকুমেন্টেশন আপডেট করতে হবে বর্তমান কোডবেস অনুযায়ী।</p>
+            <p><span class="impact impact-high">🔴 Impact: High</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-4: ডেড কোড — ৩টি ফাইল আনইউজড</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> নিচের ফাইলগুলো কোথাও import/use করা হয়নি:</p>
+            <ul>
+                <li><code class="file-path">src/llm-providers/OpenCodeProvider.ts</code> — LLMGateway.ts সরাসরি createOpenAICompatible ব্যবহার করে</li>
+                <li><code class="file-path">src/llm-providers/UniversalLLMProvider.ts</code> — একই কারণে আনইউজড</li>
+                <li><code class="file-path">src/utils/responseNormalizer.ts</code> — Vercel AI SDK নিজেই normalize করে</li>
+                <li><code class="file-path">src/utils/logger.ts</code> — server.ts এ DB-based logger ব্যবহার করা হয়, file logger নয়</li>
+            </ul>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> ফাইলগুলো মুছে ফেলা বা রিফ্যাক্টর করা। এগুলো কম্পাইল টাইমে অন্তর্ভুক্ত হলে বিল্ডサイズ বাড়ায় এবং মেইন্টেনেন্স জটিলতা তৈরি করে।</p>
+            <p><span class="impact impact-high">🔴 Impact: Medium</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-5: AgentLoop-এ System Prompt ডুপ্লিকেশন</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> <code class="file-path">src/agents/agentFactory.ts</code> ইতিমধ্যে টুল ইনফর্মেশন system prompt-এ inject করে। কিন্তু <code class="file-path">src/agents/core/AgentLoop.ts</code> আবার একই টুল ইনফর্মেশন system prompt-এর সাথে append করে। ফলে LLM-এ ডুপ্লিকেট টুল তথ্য যায়।</p>
+            <pre>// agentFactory.ts — ইতিমধ্যে inject করে
+const fullSystemPrompt = [
+  getIdentityPrefix(),
+  personaText,
+  workflowText,
+  Object.keys(tools).length > 0
+    ? `\nAVAILABLE TOOLS:\n...`  // ← এই অংশ
+    : '',
+].join('\n\n');
+
+// AgentLoop.ts — আবার append করে
+const fullSystemPrompt = `$\{this.config.systemPrompt}$\{toolBlock}\n\n...`;  // ← আবার!</pre>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> AgentLoop থেকে toolBlock অপসারণ করতে হবে, কারণ agentFactory ইতিমধ্যে এটি inject করে।</p>
+            <p><span class="impact impact-high">🟡 Impact: Medium</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-6: Windows-নির্ভর কোড server.ts-এ</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> <code class="file-path">server.ts</code> এর শুরুতে আছে:</p>
+            <pre>try { const { execSync } = await import('child_process');
+      execSync('chcp 65001', { stdio: 'ignore' }); } catch {}</pre>
+            <p>এই <code>chcp 65001</code> কমান্ডটি শুধুমাত্র Windows কমান্ড প্রম্পটে কাজ করে। Linux/macOS-এ এটি silent fail করলেও, এটি অপ্রয়োজনীয় এবং কনফিউশন তৈরি করে।</p>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> প্ল্যাটফর্ম চেক যোগ করা (<code>process.platform === 'win32'</code>) অথবা পুরোপুরি সরিয়ে ফেলা।</p>
+            <p><span class="impact impact-high">🟡 Impact: Low</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-7: tsconfig.json-এ noImplicitAny: false</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> <code class="file-path">tsconfig.json</code> এ <code>"noImplicitAny": false</code> সেট করা আছে। এর মানে TypeScript এমন অনেক টাইপ চেক করবে না যা implicit any টাইপ পায়। এটি টাইপ সেফটি দুর্বল করে এবং runtime error-এর সম্ভাবনা বাড়ায়।</p>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> <code>noImplicitAny: true</code> সেট করে সব implicit any ঠিক করতে হবে।</p>
+            <p><span class="impact impact-high">🟡 Impact: Medium</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-8: .env ফাইলে API Key প্লেইনটেক্সট</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> <code class="file-path">.env</code> ফাইলে API Key প্লেইনটেক্সটে সংরক্ষিত আছে। যদিও .env ফাইলটি .gitignore-এ আছে, তবুও লোকাল মেশিনে এটি একটি নিরাপত্তা ঝুঁকি।</p>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> একটি <code>.env.example</code> ফাইল তৈরি করা উচিত যেখানে placeholder API Key থাকবে। প্রকৃত .env ফাইল কখনই শেয়ার করা উচিত নয়।</p>
+            <p><span class="impact impact-high">🟡 Impact: Medium (if .env is not shared)</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-9: টেস্ট কভারেজ শূন্য</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> <code class="file-path">package.json</code> এ test script আছে: <code>"test": "echo \"No tests yet\" && exit 0"</code>। কোনো unit test, integration test, বা e2e test নেই।</p>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> Vitest বা Jest ব্যবহার করে টেস্ট ফ্রেমওয়ার্ক সেটআপ করতে হবে এবং প্রতিটি মডিউলের জন্য টেস্ট লিখতে হবে।</p>
+            <p><span class="impact impact-high">🔴 Impact: High</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">⚠️ C-10: utils/mathUtils.ts — অপ্রাসঙ্গিক কোড</span>
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+        <div class="card-body">
+            <p><span class="status-dot red"></span> <strong>সমস্যা:</strong> <code class="file-path">utils/mathUtils.ts</code> ফাইলটি GCD (Greatest Common Divisor) এবং LCM (Least Common Multiple) ক্যালকুলেট করে। এই ফাইলটি ZombieCoder AI Agent সিস্টেমের সাথে সম্পর্কিত নয়। এটি সম্ভবত অন্য কোনো প্রজেক্ট থেকে গেছে।</p>
+            <p><span class="status-dot green"></span> <strong>সমাধান:</strong> ফাইলটি সরিয়ে ফেলা বা আলাদা একটি ইউটিলিটি প্যাকেজে স্থানান্তর করা।</p>
+            <p><span class="impact impact-high">🟡 Impact: Low</span></p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ 4. CODE QUALITY ═══ -->
+<section id="code-quality">
+    <h2>📊 ৪. কোড কোয়ালিটি ও মেইন্টেনেন্স ইস্যু</h2>
+
+    <div class="summary-box">
+        <h3>📈 কোড কোয়ালিটি মেট্রিক্স</h3>
+        <div class="stats-grid" style="margin-bottom:0">
+            <div class="stat-card">
+                <div class="number" style="color:var(--success)">B+</div>
+                <div class="label">Overall Quality</div>
+                <div class="sub-label">গড়পড়তা, উন্নতির সুযোগ আছে</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" style="color:var(--warning)">6</div>
+                <div class="label">Code Smells</div>
+                <div class="sub-label">রিফ্যাক্টরিং প্রয়োজন</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" style="color:var(--error)">0%</div>
+                <div class="label">টেস্ট কভারেজ</div>
+                <div class="sub-label">কোনো টেস্ট নেই</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" style="color:var(--info)">4</div>
+                <div class="label">মিসিং ফাইল</div>
+                <div class="sub-label">specialists/, config/identity.ts</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">🔧 কোড স্মেল বিশ্লেষণ</span>
+            <span class="badge badge-medium">Code Smell</span>
+        </div>
+        <div class="card-body">
+            <table>
+                <tr><th>#</th><th>সমস্যা</th><th>ফাইল</th><th>সাজেশন</th></tr>
+                <tr>
+                    <td>1</td>
+                    <td><code>(process.env as any)</code> টাইপ কাস্টিং</td>
+                    <td><code>src/types/agent.ts</code></td>
+                    <td>প্রপার টাইপ ডিফাইন করে env টাইপ সেফ করুন</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><code>as const</code> tools-এ ব্যবহার করা হয়েছে কিন্তু টাইপ ইরেজার হয়</td>
+                    <td><code>src/agents/tools/index.ts</code></td>
+                    <td>টুল টাইপগুলো export করে ব্যবহার করুন</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>agentFactory.ts এবং database.ts-এ Persona ডেটা ডুপ্লিকেট</td>
+                    <td><code>agentFactory.ts</code>, <code>database.ts</code></td>
+                    <td>একটি Single Source of Truth ঠিক করুন</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>DB connection close/finalize নেই</td>
+                    <td><code>src/db/database.ts</code></td>
+                    <td>Graceful shutdown যোগ করুন</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Server.ts-এ inline requireApiKey middleware</td>
+                    <td><code>server.ts</code></td>
+                    <td>মিডলওয়্যার আলাদা ফাইলে নিন</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Magic numbers: maxSteps ডিফল্ট ১০, টাইমআউট ১০০০০</td>
+                    <td><code>AgentLoop.ts</code>, <code>tools/index.ts</code></td>
+                    <td>Constants ফাইল তৈরি করুন</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">📦 Dependency Health</span>
+            <span class="badge badge-medium">Audit</span>
+        </div>
+        <div class="card-body">
+            <p><strong>মূল ডিপেন্ডেন্সি:</strong> ১২টি প্রোডাকশন + ৪টি ডেভ ডিপেন্ডেন্সি</p>
+            <table>
+                <tr><th>Package</th><th>Version</th><th>Status</th><th>নোট</th></tr>
+                <tr><td>express</td><td>^5.2.1</td><td>✅</td><td>Express 5 — latest</td></tr>
+                <tr><td>ai (Vercel AI SDK)</td><td>^6.0.206</td><td>✅</td><td>Latest v6</td></tr>
+                <tr><td>@ai-sdk/openai-compatible</td><td>^2.0.50</td><td>✅</td><td>Latest</td></tr>
+                <tr><td>better-sqlite3</td><td>^12.11.1</td><td>✅</td><td>Latest</td></tr>
+                <tr><td>zod</td><td>^4.4.3</td><td>⚠️</td><td>Zod 4 — breaking changes থেকে সতর্ক থাকুন</td></tr>
+                <tr><td>langchain</td><td>^1.4.5</td><td>⚠️</td><td>শুধু কিছু টাইপের জন্য ব্যবহার — অপসারণযোগ্য</td></tr>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ 5. SECURITY ═══ -->
+<section id="security">
+    <h2>🔒 ৫. নিরাপত্তা বিশ্লেষণ</h2>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header">
+                <span class="title">✅ ভালো দিক</span>
+                <span class="badge badge-low">Good</span>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>ফাইল অপারেশন path-safe — ট্রাভার্সাল আটকানো হয়</li>
+                    <li>কমান্ড হোয়াইটলিস্ট — শুধু অনুমোদিত কমান্ড চালানো যায়</li>
+                    <li>API key authentication (optional) — v1 এন্ডপয়েন্টে</li>
+                    <li>.env .gitignore-এ আছে — случайно commit হবে না</li>
+                    <li>SQLite WAL mode — data integrity ভালো</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <span class="title">❌ উন্নতির প্রয়োজন</span>
+                <span class="badge badge-critical">Risk</span>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>CORS সব origin-এর জন্য open — production-এ সীমিত করা উচিত</li>
+                    <li>কোনো rate limiting নেই — DoS attack সম্ভব</li>
+                    <li>কোনো request body validation নেই (শুধু size limit)</li>
+                    <li>SQL injection risk কম কিন্তু prepared statement ব্যবহার করা ভালো</li>
+                    <li>API key .env-এ plaintext — এনক্রিপ্ট করা উচিত</li>
+                    <li>HTTPS নেই — production-এ SSL/TLS প্রয়োজন</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">🛡️ নিরাপত্তা সুপারিশ</span>
+            <span class="badge badge-info">Recommendations</span>
+        </div>
+        <div class="card-body">
+            <ol>
+                <li><strong>CORS সীমিত করুন:</strong> <code>origin: process.env.CORS_ORIGIN || 'http://localhost:3000'</code></li>
+                <li><strong>Rate Limiting যোগ করুন:</strong> <code>express-rate-limit</code> প্যাকেজ ব্যবহার করে</li>
+                <li><strong>Input Validation:</strong> সব request body Zod schema দিয়ে validate করুন</li>
+                <li><strong>Helmet.js:</strong> HTTP security headers সেট করতে</li>
+                <li><strong>API Key Encryption:</strong> .env ফাইল এনক্রিপ্টেড রাখুন বা vault service ব্যবহার করুন</li>
+                <li><strong>Graceful Shutdown:</strong> DB connection properly close করুন</li>
+            </ol>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ 6. REQUIRED UPDATES ═══ -->
+<section id="updates">
+    <h2>🔄 ৬. প্রয়োজনীয় আপডেট ও মাইগ্রেশন প্ল্যান</h2>
+
+    <div class="summary-box">
+        <h3>🎯 অগ্রাধিকার ভিত্তিক আপডেট তালিকা</h3>
+        <p>নিচে প্রতিটি আপডেটের প্রয়োজনীয়তা, প্রভাব, এবং সময় অনুমান দেওয়া হল।</p>
+    </div>
+
+    <!-- Phase 1 -->
+    <h3>🔴 ফেজ ১: ক্রিটিক্যাল ফিক্স (১-২ দিন)</h3>
+    <div class="table-wrap">
+        <table>
+            <tr><th>#</th><th>আপডেট</th><th>ফাইল</th><th>সময়</th></tr>
+            <tr>
+                <td>1</td>
+                <td>স্ক্রিপ্ট ফিক্স বা রিমুভ — specialist import ঠিক করা</td>
+                <td><code>scripts/run_agent_checks.*</code></td>
+                <td>~৩০ মিনিট</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>AgentLoop থেকে duplicate tool block সরানো</td>
+                <td><code>src/agents/core/AgentLoop.ts</code></td>
+                <td>~১৫ মিনিট</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>server.ts থেকে Windows-specific chcp কমান্ড সরানো</td>
+                <td><code>server.ts</code></td>
+                <td>~৫ মিনিট</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>utils/mathUtils.ts সরানো বা স্থানান্তর</td>
+                <td><code>utils/mathUtils.ts</code></td>
+                <td>~১০ মিনিট</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>tsconfig.json এ noImplicitAny: true করা</td>
+                <td><code>tsconfig.json</code></td>
+                <td>~১-২ ঘন্টা (টাইপ ফিক্স)</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Phase 2 -->
+    <h3>🟡 ফেজ ২: ডকুমেন্টেশন আপডেট (১-২ দিন)</h3>
+    <div class="table-wrap">
+        <table>
+            <tr><th>#</th><th>আপডেট</th><th>ফাইল</th><th>সময়</th></tr>
+            <tr>
+                <td>6</td>
+                <td><code>docs/index.html</code> — মডেল নাম, পাথ, API লিস্ট আপডেট</td>
+                <td><code>docs/index.html</code></td>
+                <td>~১ ঘন্টা</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td><code>docs/README.md</code> — বর্তমান API অনুযায়ী আপডেট</td>
+                <td><code>docs/README.md</code></td>
+                <td>~৩০ মিনিট</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td><code>docs/README_BN.md</code> — বাংলা গাইড আপডেট</td>
+                <td><code>docs/README_BN.md</code></td>
+                <td>~৩০ মিনিট</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td><code>.env.example</code> তৈরি — placeholder API key সহ</td>
+                <td><code>.env.example (new)</code></td>
+                <td>~১৫ মিনিট</td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td><code>identity.json</code> আপডেট — বর্তমান তথ্য অনুযায়ী</td>
+                <td><code>identity.json</code></td>
+                <td>~১০ মিনিট</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Phase 3 -->
+    <h3>🔵 ফেজ ৩: কোড কোয়ালিটি ইমপ্রুভমেন্ট (২-৩ দিন)</h3>
+    <div class="table-wrap">
+        <table>
+            <tr><th>#</th><th>আপডেট</th><th>ফাইল</th><th>সময়</th></tr>
+            <tr>
+                <td>11</td>
+                <td>ডেড কোড রিমুভ — OpenCodeProvider, UniversalLLMProvider, responseNormalizer, logger</td>
+                <td><code>src/llm-providers/*</code>, <code>src/utils/*</code></td>
+                <td>~১ ঘন্টা</td>
+            </tr>
+            <tr>
+                <td>12</td>
+                <td>Constants ফাইল তৈরি — টাইমআউট, maxSteps, ডিফল্ট ভ্যালু</td>
+                <td><code>src/constants.ts (new)</code></td>
+                <td>~৩০ মিনিট</td>
+            </tr>
+            <tr>
+                <td>13</td>
+                <td>server.ts রিফ্যাক্টর — middleware আলাদা ফাইলে</td>
+                <td><code>server.ts</code>, <code>src/middleware/</code></td>
+                <td>~১.৫ ঘন্টা</td>
+            </tr>
+            <tr>
+                <td>14</td>
+                <td>(process.env as any) টাইপ নিরাপদ করা</td>
+                <td><code>src/types/agent.ts</code></td>
+                <td>~৩০ মিনিট</td>
+            </tr>
+            <tr>
+                <td>15</td>
+                <td>Persona ডেটা SSOT — agentFactory বা database থেকে সরান</td>
+                <td><code>agentFactory.ts</code>, <code>database.ts</code></td>
+                <td>~১ ঘন্টা</td>
+            </tr>
+            <tr>
+                <td>16</td>
+                <td>DB graceful shutdown যোগ করা</td>
+                <td><code>src/db/database.ts</code>, <code>server.ts</code></td>
+                <td>~৩০ মিনিট</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Phase 4 -->
+    <h3>🟢 ফেজ ৪: টেস্টিং ও সিকিউরিটি (৩-৫ দিন)</h3>
+    <div class="table-wrap">
+        <table>
+            <tr><th>#</th><th>আপডেট</th><th>টুল/ফাইল</th><th>সময়</th></tr>
+            <tr>
+                <td>17</td>
+                <td>Vitest সেটআপ + ইউনিট টেস্ট (tools, types, agentFactory)</td>
+                <td><code>vitest.config.ts</code>, <code>__tests__/</code></td>
+                <td>~২ দিন</td>
+            </tr>
+            <tr>
+                <td>18</td>
+                <td>Rate limiting যোগ করা (express-rate-limit)</td>
+                <td><code>server.ts</code></td>
+                <td>~৩০ মিনিট</td>
+            </tr>
+            <tr>
+                <td>19</td>
+                <td>Helmet.js যোগ করা</td>
+                <td><code>server.ts</code></td>
+                <td>~১৫ মিনিট</td>
+            </tr>
+            <tr>
+                <td>20</td>
+                <td>Request body validation (Zod)</td>
+                <td><code>src/middleware/validate.ts</code></td>
+                <td>~১ ঘন্টা</td>
+            </tr>
+            <tr>
+                <td>21</td>
+                <td>CORS সীমিত করা (env-ভিত্তিক)</td>
+                <td><code>server.ts</code></td>
+                <td>~১৫ মিনিট</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Phase 5 -->
+    <h3>🟣 ফেজ ৫: ফিচার ইমপ্রুভমেন্ট (৩-৫ দিন)</h3>
+    <div class="table-wrap">
+        <table>
+            <tr><th>#</th><th>ফিচার</th><th>বিবরণ</th><th>সময়</th></tr>
+            <tr>
+                <td>22</td>
+                <td>Docker সেটআপ</td>
+                <td>Dockerfile + docker-compose.yml</td>
+                <td>~১ দিন</td>
+            </tr>
+            <tr>
+                <td>23</td>
+                <td>CI/CD pipeline (GitHub Actions)</td>
+                <td>build → lint → test → deploy</td>
+                <td>~১ দিন</td>
+            </tr>
+            <tr>
+                <td>24</td>
+                <td>MultiAgentOrchestrator ইমপ্লিমেন্ট</td>
+                <td>এজেন্টদের মধ্যে কাজ ভাগ করার সিস্টেম</td>
+                <td>~২ দিন</td>
+            </tr>
+            <tr>
+                <td>25</td>
+                <td>API ডকুমেন্টেশন (Swagger/OpenAPI)</td>
+                <td>Auto-generated API docs</td>
+                <td>~১ দিন</td>
+            </tr>
+            <tr>
+                <td>26</td>
+                <td>Monitoring & Metrics (Prometheus)</td>
+                <td>রিকোয়েস্ট কাউন্ট, ল্যাটেন্সি, error rate</td>
+                <td>~১ দিন</td>
+            </tr>
+        </table>
+    </div>
+</section>
+
+<!-- ═══ 7. ROADMAP ═══ -->
+<section id="roadmap">
+    <h2>🗺️ ৭. রোডম্যাপ ও টাইমলাইন</h2>
+
+    <div class="timeline">
+        <div class="timeline-item">
+            <div class="t-time">সপ্তাহ ১</div>
+            <div class="t-title">🔴 ফেজ ১ + ফেজ ২ — Critical Fixes + Documentation</div>
+            <div class="t-desc">
+                <strong>Deliverables:</strong>
+                <ul>
+                    <li>স্ক্রিপ্ট ফিক্স/রিমুভ</li>
+                    <li>ডুপ্লিকেট কোড অপসারণ</li>
+                    <li>Windows-specific কোড ফিক্স</li>
+                    <li>mathUtils.ts সরানো</li>
+                    <li>noImplicitAny: true</li>
+                    <li>সম্পূর্ণ ডক্স আপডেট</li>
+                    <li>.env.example তৈরি</li>
+                </ul>
+                <div class="progress-bar"><div class="fill fill-red" style="width:0%"></div></div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="t-time">সপ্তাহ ২</div>
+            <div class="t-title">🟡 ফেজ ৩ — Code Quality</div>
+            <div class="t-desc">
+                <strong>Deliverables:</strong>
+                <ul>
+                    <li>ডেড কোড রিমুভ</li>
+                    <li>Constants ফাইল</li>
+                    <li>server.ts রিফ্যাক্টর</li>
+                    <li>টাইপ সেফটি ইমপ্রুভ</li>
+                    <li>Persona SSOT</li>
+                    <li>Graceful shutdown</li>
+                </ul>
+                <div class="progress-bar"><div class="fill fill-yellow" style="width:0%"></div></div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="t-time">সপ্তাহ ৩-৪</div>
+            <div class="t-title">🔵 ফেজ ৪ — Testing & Security</div>
+            <div class="t-desc">
+                <strong>Deliverables:</strong>
+                <ul>
+                    <li>Vitest সেটআপ</li>
+                    <li>Unit tests (tools, types, agents)</li>
+                    <li>Rate limiting</li>
+                    <li>Helmet.js</li>
+                    <li>Input validation</li>
+                    <li>CORS সীমিত</li>
+                </ul>
+                <div class="progress-bar"><div class="fill fill-blue" style="width:0%"></div></div>
+            </div>
+        </div>
+        <div class="timeline-item">
+            <div class="t-time">সপ্তাহ ৫-৬</div>
+            <div class="t-title">🟣 ফেজ ৫ — Features & Deployment</div>
+            <div class="t-desc">
+                <strong>Deliverables:</strong>
+                <ul>
+                    <li>Docker সেটআপ</li>
+                    <li>CI/CD pipeline</li>
+                    <li>MultiAgentOrchestrator</li>
+                    <li>Swagger docs</li>
+                    <li>Monitoring</li>
+                </ul>
+                <div class="progress-bar"><div class="fill fill-green" style="width:0%"></div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ 8. SUMMARY ═══ -->
+<section id="summary">
+    <h2>📌 ৮. সারসংক্ষেপ ও সুপারিশ</h2>
+
+    <div class="summary-box">
+        <h3>🎯 প্রজেক্টের বর্তমান অবস্থা</h3>
+        <p>ZombieCoder Agent Module v2.0.0 একটি <strong>কার্যকরী মাল্টি-এজেন্ট AI সিস্টেম</strong> যা সফলভাবে চালু আছে। কিন্তু কোডবেসে কিছু <strong>জরুরি সমস্যা</strong> আছে যা দ্রুত সমাধান করা প্রয়োজন।</p>
+    </div>
+
+    <div class="grid-3">
+        <div class="card">
+            <div class="card-header">
+                <span class="title">✅ যা ভালো কাজ করছে</span>
+                <span class="badge badge-low">Strength</span>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>এজেন্ট সিস্টেম সম্পূর্ণ কার্যকর</li>
+                    <li>টুল কলিং লুপ ঠিকভাবে কাজ করে</li>
+                    <li>SQLite ডাটাবেস ভালো</li>
+                    <li>SPA UI ব্যবহারবান্ধব</li>
+                    <li>OpenAI-compatible API</li>
+                    <li>Streaming support</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <span class="title">⚠️ যেখানে উন্নতি প্রয়োজন</span>
+                <span class="badge badge-medium">Improvement</span>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>ডকুমেন্টেশন আপডেট</li>
+                    <li>ডেড কোড অপসারণ</li>
+                    <li>টেস্ট কভারেজ</li>
+                    <li>টাইপ সেফটি</li>
+                    <li>সিকিউরিটি</li>
+                    <li>স্ক্রিপ্ট ফিক্স</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <span class="title">🔮 ভবিষ্যৎ পরিকল্পনা</span>
+                <span class="badge badge-info">Future</span>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>Multi-Agent Orchestrator</li>
+                    <li>Docker containerization</li>
+                    <li>CI/CD pipeline</li>
+                    <li>API documentation (Swagger)</li>
+                    <li>Monitoring & Analytics</li>
+                    <li>Plugin/Extension system</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="title">📊 গ্রেড: B+ (প্রয়োজনীয় উন্নতি)</span>
+            <span class="badge badge-medium">Assessment</span>
+        </div>
+        <div class="card-body">
+            <div class="progress-bar"><div class="fill fill-yellow" style="width:70%"></div></div>
+            <p style="margin-top: 8px;">প্রজেক্টটি ৭০% সম্পূর্ণ। মূল কার্যকারিতা ঠিক থাকলেও, ডকুমেন্টেশন, টেস্টিং, এবং কোড কোয়ালিটিতে উল্লেখযোগ্য উন্নতি প্রয়োজন। ৫-৬ সপ্তাহের একটি স্প্রিন্টে সব সমস্যা সমাধান করে প্রজেক্টকে A+ গ্রেডে নিয়ে যাওয়া সম্ভব।</p>
+        </div>
+    </div>
+
+    <div class="card" style="text-align: center; border-color: var(--primary);">
+        <div class="card-body">
+            <p style="font-size: 1.1rem; color: var(--text);">🏁 <strong>প্রথম পদক্ষেপ:</strong> আগামী ২৪ ঘন্টার মধ্যে <strong>ফেজ ১ (Critical Fixes)</strong> শুরু করুন।</p>
+            <p style="color: var(--text-muted);">সবচেয়ে জরুরি: স্ক্রিপ্ট ফিক্স, AgentLoop ডিডপ্লিকেশন, এবং ডক্স আপডেট।</p>
+        </div>
+    </div>
+</section>
+
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+    <div class="owner">
+        <strong>ZombieCoder Agent Module</strong> — v2.0.0
+    </div>
+    <div class="owner">
+        👤 <strong>Sahon Srabon</strong> — Developer Zone, Dhaka, Bangladesh
+    </div>
+    <div class="contact">
+        📧 <a href="mailto:infi@zombiecoder.my.id">infi@zombiecoder.my.id</a> &nbsp;|&nbsp;
+        🌐 <a href="https://zombiecoder.my.id" target="_blank">zombiecoder.my.id</a> &nbsp;|&nbsp;
+        📞 +880 1323-626282
+    </div>
+    <div class="contact" style="margin-top: 8px; font-style: italic; color: var(--text-dim);">
+        "যেখানে কোড ও কথা বলে, সমস্যাগুলো নিজের কাঁধে তোলে"
+    </div>
+    <div class="contact" style="margin-top: 12px; font-size: 0.7rem; color: var(--text-dim);">
+        Proprietary — Local Freedom Protocol &nbsp;|&nbsp; © 2026 Developer Zone
+    </div>
+</footer>
+
+</body>
+</html>

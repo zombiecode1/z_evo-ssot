@@ -76,6 +76,7 @@ npm install
 
 # Build
 npm run build
+npm start
 
 # Start server
 npm start

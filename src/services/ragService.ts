@@ -21,6 +21,10 @@ export class DiskRAGService {
     this.ssotPath = path.join(this.workingDir, ZOMBIE_DIR, SSOT_FILE);
     this.permPath = path.join(this.workingDir, ZOMBIE_DIR, PERM_FILE);
 
+    if (opts?.autoInit && !fs.existsSync(this.workingDir)) {
+      fs.mkdirSync(this.workingDir, { recursive: true });
+    }
+
     const zombieDir = path.join(this.workingDir, ZOMBIE_DIR);
     const existsZombieDir = fs.existsSync(zombieDir);
     const existsSsot = fs.existsSync(this.ssotPath);

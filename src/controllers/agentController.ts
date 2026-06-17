@@ -24,6 +24,16 @@ function stripThinkBlocks(text: string): string {
   return text.replace(/^\s*<think>[\s\S]*?<\/think>\s*/i, '');
 }
 
+function snapshotRagState(directory: string) {
+  const resolved = path.resolve(directory);
+  return {
+    directory: resolved,
+    exists: fs.existsSync(resolved),
+    zombieDirExists: fs.existsSync(path.join(resolved, '.zombiecoder')),
+    ssotExists: fs.existsSync(path.join(resolved, '.zombiecoder', 'SSOT.md')),
+  };
+}
+
 let agentService: AgentService;
 let ragService: DiskRAGService;
 let mawlanaRouter: MawlanaRouter;
@@ -182,7 +192,9 @@ export const handleCreateEditorSession = async (req: Request, res: Response) => 
     if (!directory) return res.status(400).json({ error: { message: 'directory is required', type: 'invalid_request_error' } });
 
     const resolved = path.resolve(String(directory));
-    if (!fs.existsSync(resolved)) return res.status(400).json({ error: { message: 'directory does not exist', type: 'invalid_request_error' } });
+    if (!fs.existsSync(resolved)) {
+      fs.mkdirSync(resolved, { recursive: true });
+    }
 
     if (!stateDb) return res.status(500).json({ error: { message: 'state db not initialized', type: 'server_error' } });
 
@@ -490,31 +502,35 @@ export const handleAgentChat = async (req: Request, res: Response) => {
 
     // Streaming path — AI SDK streamText (no double model call)
     if (body.stream === true) {
-      const streamResult = await runStreamingPipeline({
-        messages,
-        model: body.model,
-        directory,
-        workspaceId: workspace_id ? String(workspace_id) : undefined,
-        conversationId: resolvedConvoId || undefined,
-        category,
-        temperature: body.temperature,
-        maxOutputTokens: body.max_tokens ?? body.max_completion_tokens,
-        enableRag: true,
-      });
-
-      res.setHeader('X-Conversation-Id', resolvedConvoId || '');
-      res.setHeader('X-Model', streamResult.model);
-      res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no',
-      });
-
-      let aborted = false;
-      req.on('close', () => { aborted = true; });
-
+      let streamResult: any = null;
       try {
+        res.setHeader('X-Conversation-Id', resolvedConvoId || '');
+        res.setHeader('X-Model', body.model || 'auto');
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        });
+        res.flushHeaders?.();
+        res.socket?.setNoDelay(true);
+        res.write(': connected\n\n');
+
+        streamResult = await runStreamingPipeline({
+          messages,
+          model: body.model,
+          directory,
+          workspaceId: workspace_id ? String(workspace_id) : undefined,
+          conversationId: resolvedConvoId || undefined,
+          category,
+          temperature: body.temperature,
+          maxOutputTokens: body.max_tokens ?? body.max_completion_tokens,
+          enableRag: true,
+        });
+
+        let aborted = false;
+        req.on('close', () => { aborted = true; });
+
         for await (const chunk of streamResult.stream) {
           if (aborted) break;
           // AI SDK textStream yields plain text chunks — wrap in SSE format
@@ -533,9 +549,16 @@ export const handleAgentChat = async (req: Request, res: Response) => {
         }
       } catch (streamErr: any) {
         console.warn('Stream error:', streamErr?.message || streamErr);
+        if (!res.headersSent) {
+          res.status(500).json({ error: { message: streamErr?.message || 'stream failed', type: 'server_error' } });
+        } else if (!res.writableEnded) {
+          res.write(`data: ${JSON.stringify({ error: streamErr?.message || 'stream failed' })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
       }
 
-      if (!aborted) {
+      if (streamResult && !res.writableEnded) {
         // Final chunk with finish_reason
         const finalChunk = {
           id: streamResult.id,
@@ -716,6 +739,11 @@ export const handleSetDirectory = async (req: Request, res: Response) => {
       return res.status(400).json({ error: { message: 'directory is required', type: 'invalid_request_error' } });
     }
     const resolvedDir = path.resolve(String(directory));
+    const before = snapshotRagState(resolvedDir);
+
+    if (!fs.existsSync(resolvedDir)) {
+      fs.mkdirSync(resolvedDir, { recursive: true });
+    }
 
     // Auto-trust any directory (global agent mode)
     if (stateDb && fs.existsSync(resolvedDir)) {
@@ -777,9 +805,13 @@ export const handleSetDirectory = async (req: Request, res: Response) => {
       console.warn('watcher start failed:', e?.message || e);
     }
 
+    const after = snapshotRagState(resolvedDir);
+
     return res.json({
       ok: true,
       directory: resolvedDir,
+      before,
+      after,
       ssotExists: ragService.ssotExists(),
       message: 'Directory ready. Agent can work.',
     });
@@ -811,15 +843,19 @@ export const handleGrantPermission = async (req: Request, res: Response) => {
     }
 
     if (scope === 'scan' && !ragService.ssotExists()) {
+      const before = directory ? snapshotRagState(directory) : undefined;
       const scanResult = await ragService.scanProject();
       const template = ragService.generateSSOTTemplate(scanResult);
       ragService.saveSSOT(template);
+      const after = directory ? snapshotRagState(directory) : undefined;
 
       return res.json({
         ok: true,
         message: 'Permission granted. Project scanned. SSOT.md created.',
         ssotPath: path.join(ragService.currentDir, '.zombiecoder', 'SSOT.md'),
         fileCount: scanResult.files.length,
+        before,
+        after,
       });
     }
 
@@ -850,6 +886,7 @@ export const handleRescan = async (req: Request, res: Response) => {
     if (!ragService.hasPermission('scan')) {
       return res.status(403).json({ error: { message: 'No scan permission. Grant permission first.', type: 'permission_error' } });
     }
+    const before = ragService.currentDir ? snapshotRagState(ragService.currentDir) : undefined;
     const scanResult = await ragService.scanProject();
     const template = ragService.generateSSOTTemplate(scanResult);
     ragService.saveSSOT(template);
@@ -871,7 +908,8 @@ export const handleRescan = async (req: Request, res: Response) => {
         console.warn('rescan index failed:', e?.message || e);
       }
     }
-    res.json({ ok: true, message: 'Project rescanned and SSOT.md updated.', fileCount: scanResult.files.length });
+    const after = ragService.currentDir ? snapshotRagState(ragService.currentDir) : undefined;
+    res.json({ ok: true, message: 'Project rescanned and SSOT.md updated.', fileCount: scanResult.files.length, before, after });
   } catch (err: any) {
     res.status(500).json({ error: { message: err.message, type: 'server_error' } });
   }

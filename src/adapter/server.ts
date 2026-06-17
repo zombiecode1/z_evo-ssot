@@ -20,6 +20,7 @@ import crypto from 'crypto';
 let callMcpTool: any = null;
 let isMcpConnected: any = null;
 let runLangChainAgent: any = null;
+let runStreamingPipeline: any = null;
 
 async function loadDeps() {
   if (!callMcpTool) {
@@ -28,6 +29,12 @@ async function loadDeps() {
       callMcpTool = mcp.callMcpTool;
       isMcpConnected = mcp.isMcpConnected;
     } catch { /* MCP not available */ }
+  }
+  if (!runStreamingPipeline) {
+    try {
+      const pipeline = await import('../services/unifiedPipeline');
+      runStreamingPipeline = pipeline.runStreamingPipeline;
+    } catch { /* LangChain not available */ }
   }
   if (!runLangChainAgent) {
     try {
@@ -168,36 +175,39 @@ async function handleChatStream(
     'X-Accel-Buffering': 'no',
     'Access-Control-Allow-Origin': '*',
   });
+  res.flushHeaders?.();
+  res.socket?.setNoDelay(true);
 
   // Send first chunk immediately (connection confirmed)
   res.write(`event: connected\ndata: ${JSON.stringify({ session_id: sessionId, status: 'streaming' })}\n\n`);
 
   try {
-    // Use LangChain agent for streaming
-    const result = await runLangChainAgent({
+    // Use the unified streaming pipeline so chunks appear as they are produced.
+    const result = await runStreamingPipeline({
       messages,
       sessionId,
-      modelName: model,
+      conversationId: sessionId,
+      model,
+      directory: PROJECT_ROOT,
+      enableTools: true,
+      enableRag: true,
     });
 
-    // Send response chunks
-    const chunkSize = 50;
-    const content = result.response;
-    
-    for (let i = 0; i < content.length; i += chunkSize) {
-      const chunk = content.substring(i, i + chunkSize);
-      res.write(`event: chunk\ndata: ${JSON.stringify({ content: chunk })}\n\n`);
-      
-      // Small delay for streaming effect
-      if (i + chunkSize < content.length) {
-        await new Promise(r => setTimeout(r, 30));
-      }
+    // Send response chunks as they arrive.
+    let reply = '';
+    for await (const chunk of result.stream) {
+      const text = typeof chunk === 'string'
+        ? chunk
+        : String(chunk?.text || chunk?.delta || chunk?.content || '');
+      if (!text) continue;
+      reply += text;
+      res.write(`event: chunk\ndata: ${JSON.stringify({ content: text })}\n\n`);
     }
 
     // Save assistant message to session
     session.messages.push({
       role: 'assistant',
-      content: result.response,
+      content: reply,
       timestamp: Date.now(),
     });
 
@@ -208,7 +218,7 @@ async function handleChatStream(
     res.write(`event: done\ndata: ${JSON.stringify({
       session_id: sessionId,
       model: result.model,
-      tool_calls: result.toolCalls,
+      tool_calls: [],
       message_count: session.messages.length,
     })}\n\n`);
 
