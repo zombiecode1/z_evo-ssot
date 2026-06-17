@@ -3,8 +3,7 @@ import { GroqService } from '../services/groqService';
 import { ChatCompletionCreateParams } from 'groq-sdk/resources/chat/completions';
 import { getIdentity } from '../services/identityService';
 import { logUsage, recordSession } from '../admin/db';
-import { ProviderGateway } from '../providers/provider-gateway';
-import { ResponseNormalizer } from '../services/responseNormalizer';
+import { runPipeline, runStreamingPipeline, routeModel } from '../services/unifiedPipeline';
 
 function tryParseJSON(text: string): any {
   try {
@@ -26,17 +25,9 @@ function escapeHtml(str: string | undefined | null): string {
 }
 
 let groqService: GroqService;
-let providerGateway: ProviderGateway;
-
-// Legacy stripThinkBlocks — kept for backward compatibility
-// New code should use ResponseNormalizer.stripThinkBlocks() directly
-function stripThinkBlocks(text: string): string {
-  return ResponseNormalizer.stripThinkBlocks(text);
-}
 
 export const initializeService = (apiKey: string) => {
   groqService = new GroqService(apiKey);
-  providerGateway = new ProviderGateway();
   return groqService;
 };
 
@@ -46,23 +37,6 @@ export const handleChatCompletion = async (req: Request, res: Response) => {
   const startTime = Date.now();
   try {
     const params: ChatCompletionCreateParams = req.body;
-
-    // Identity anchoring: ensure the system identity prompt is the first system message
-    try {
-      const identity = getIdentity();
-      const sys = identity?.system_identity?.system_prompt;
-      if (sys) {
-        params.messages = Array.isArray(params.messages) ? params.messages : [];
-        const first = params.messages[0];
-        const needsInsert = !(first && first.role === 'system' && String(first.content || '').includes('ZombieCoder'));
-        if (needsInsert) {
-          params.messages.unshift({ role: 'system', content: sys } as any);
-        }
-      }
-    } catch (e) {
-      // don't fail the request if identity anchoring has an issue
-      console.warn('identity anchor failed:', (e as any)?.message || e);
-    }
 
     if (!params.messages || !Array.isArray(params.messages) || params.messages.length === 0) {
       return res.status(400).json({
@@ -76,26 +50,29 @@ export const handleChatCompletion = async (req: Request, res: Response) => {
 
     const isStream = params.stream === true;
 
-    // ─── Provider Gateway Integration ───────────────────────────────
-    // Try provider gateway first, fall back to groqService on failure
-    try {
-      const gwResult = await providerGateway.chat({
-        model: params.model || 'auto',
-        messages: params.messages.map(m => ({
-          role: m.role as any,
-          content: String(m.content || ''),
-          tool_calls: (m as any).tool_calls,
-          tool_call_id: (m as any).tool_call_id,
-          name: (m as any).name,
-        })),
-        max_tokens: params.max_tokens ?? undefined,
-        temperature: params.temperature ?? undefined,
-        tools: params.tools as any,
-        stream: isStream,
-      });
+    // ─── Unified Pipeline (Architecture: single pipeline) ─────────
+    // Replaces: ProviderGateway + ResponseNormalizer + GroqService fallback
+    // Pipeline handles: Identity → RAG → Model Routing → AI SDK generateText/streamText
 
-      if (isStream) {
-        // Use streaming provider gateway
+    if (isStream) {
+      // ─── Streaming via Unified Pipeline ─────────────────────────
+      try {
+        const streamResult = await runStreamingPipeline({
+          messages: params.messages.map(m => ({
+            role: m.role as string,
+            content: String(m.content || ''),
+            tool_calls: (m as any).tool_calls,
+            tool_call_id: (m as any).tool_call_id,
+            name: (m as any).name,
+          })),
+          model: params.model,
+          maxOutputTokens: params.max_tokens ?? undefined,
+          temperature: params.temperature ?? undefined,
+          tools: params.tools as any,
+          tool_choice: params.tool_choice as any,
+          enableRag: false, // Legacy route: no RAG by default
+        });
+
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -103,284 +80,102 @@ export const handleChatCompletion = async (req: Request, res: Response) => {
           'X-Accel-Buffering': 'no',
         });
 
-        try {
-          const stream = providerGateway.chatStream({
-            model: params.model || 'auto',
-            messages: params.messages.map(m => ({
-              role: m.role as any,
-              content: String(m.content || ''),
-              tool_calls: (m as any).tool_calls,
-              tool_call_id: (m as any).tool_call_id,
-              name: (m as any).name,
-            })),
-            max_tokens: params.max_tokens ?? undefined,
-            temperature: params.temperature ?? undefined,
-            tools: params.tools as any,
-            stream: true,
-          });
-
-          for await (const chunk of stream) {
+        // Use textStream for legacy route (text-only, no reasoning/tool parts)
+        for await (const text of streamResult.stream) {
+          if (text) {
             const sseChunk = {
-              id: chunk.id || `chatcmpl-${Date.now()}`,
-              object: 'chat.completion.chunk',
-              created: chunk.created || Math.floor(Date.now() / 1000),
-              model: chunk.model || params.model || 'unknown',
-              choices: chunk.choices?.map((c: any) => ({
-                index: c.index || 0,
-                delta: c.delta || c.message || { content: c.text || '' },
-                finish_reason: c.finish_reason || null,
-              })) || [],
+              id: streamResult.id,
+              object: 'chat.completion.chunk' as const,
+              created: Math.floor(Date.now() / 1000),
+              model: streamResult.model,
+              choices: [{
+                index: 0,
+                delta: { content: text },
+                finish_reason: null,
+              }],
             };
             res.write(`data: ${JSON.stringify(sseChunk)}\n\n`);
           }
+        }
 
-          res.write('data: [DONE]\n\n');
-          res.end();
-        } catch (streamErr: any) {
-          // Streaming failed - try non-streaming fallback
-          console.warn('Streaming failed, falling back to non-streaming:', streamErr?.message);
-          const completion = gwResult as any;
-          const choice = completion.choices?.[0];
-          if (choice) {
-            const chunk = {
-              id: completion.id || `chatcmpl-${Date.now()}`,
-              object: 'chat.completion.chunk',
-              created: completion.created || Math.floor(Date.now() / 1000),
-              model: completion.model || params.model || 'unknown',
-              choices: [{
-                index: 0,
-                delta: { role: 'assistant', content: choice.message?.content || '' },
-                finish_reason: choice.finish_reason || 'stop',
-              }],
-            };
-            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-          }
+        // Send finish chunk
+        const finishChunk = {
+          id: streamResult.id,
+          object: 'chat.completion.chunk' as const,
+          created: Math.floor(Date.now() / 1000),
+          model: streamResult.model,
+          choices: [{
+            index: 0,
+            delta: {},
+            finish_reason: 'stop',
+          }],
+        };
+        res.write(`data: ${JSON.stringify(finishChunk)}\n\n`);
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+
+        // Log usage
+        try {
+          const durationMs = Date.now() - startTime;
+          logUsage(streamResult.model || params.model || 'unknown', 0, 0, durationMs);
+          const sessionId = (req as any).sessionId || `chat-${Date.now()}`;
+          recordSession(sessionId, undefined, undefined, streamResult.model || params.model);
+        } catch (_) { /* don't fail request for logging */ }
+
+        return;
+      } catch (streamErr: any) {
+        console.error('❌ Streaming pipeline failed:', streamErr.message);
+        // If streaming fails, end the response with error
+        if (!res.headersSent) {
+          res.status(500).json({ error: { message: streamErr.message, type: 'server_error' } });
+        } else {
+          res.write(`data: ${JSON.stringify({ error: streamErr.message })}\n\n`);
           res.write('data: [DONE]\n\n');
           res.end();
         }
-
-        groqService.addLog({
-          method: 'POST',
-          path: '/v1/chat/completions',
-          model: params.model || 'auto',
-          status: 200,
-          duration_ms: Date.now() - startTime,
-          tokens: gwResult.usage?.total_tokens || 0,
-          success: true,
-        });
         return;
       }
-
-      // Non-streaming: clean up response and log
-      // Use ResponseNormalizer for consistent handling across all providers
-      const normalized: any = ResponseNormalizer.normalize(gwResult, params.model || 'unknown');
-
-      // Strip think blocks and handle reasoning_content fallback
-      if (Array.isArray(normalized.choices)) {
-        for (const c of normalized.choices) {
-          if (typeof c.message?.content === 'string') {
-            c.message.content = ResponseNormalizer.stripThinkBlocks(c.message.content);
-          }
-          // Handle reasoning-only models (e.g., MiMo) that put response in reasoning_content
-          const content = c.message?.content;
-          if ((content === null || content === undefined || content === '') && c.message?.reasoning_content) {
-            c.message.content = c.message.reasoning_content;
-            delete c.message.reasoning_content;
-          }
-        }
-      }
-
-      const usage = normalized?.usage || {};
-      const promptTokens = usage.prompt_tokens || 0;
-      const completionTokens = usage.completion_tokens || 0;
-      try {
-        logUsage(normalized.model || params.model || 'unknown', promptTokens, completionTokens, Date.now() - startTime);
-        const sessionId = (req as any).sessionId || `chat-${Date.now()}`;
-        recordSession(sessionId, undefined, undefined, normalized.model || params.model);
-      } catch (_) { /* don't fail request for logging */ }
-
-      res.json(normalized);
-      return;
-
-    } catch (gwError: any) {
-      // Gateway failed — fall through to groqService fallback
-      console.warn('⚠️ Provider gateway failed, falling back to groqService:', gwError.message);
     }
 
-    // ─── Fallback: GroqService (existing behavior) ──────────────────
+    // ─── Non-Streaming via Unified Pipeline ───────────────────────
+    const pipelineResult = await runPipeline({
+      messages: params.messages.map(m => ({
+        role: m.role as string,
+        content: String(m.content || ''),
+        tool_calls: (m as any).tool_calls,
+        tool_call_id: (m as any).tool_call_id,
+        name: (m as any).name,
+      })),
+      model: params.model,
+      maxOutputTokens: params.max_tokens ?? undefined,
+      temperature: params.temperature ?? undefined,
+      tools: params.tools as any,
+      tool_choice: params.tool_choice as any,
+      enableRag: false, // Legacy route: no RAG by default
+    });
 
-    if (isStream) {
-      const stream = await groqService.createChatCompletion(params);
+    // Add provider field for backward compatibility
+    const response: any = {
+      ...pipelineResult,
+      provider: 'openai',
+    };
 
-      res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no',
-      });
+    // Log usage
+    try {
+      const durationMs = Date.now() - startTime;
+      logUsage(pipelineResult.model || params.model || 'unknown', pipelineResult.usage.prompt_tokens, pipelineResult.usage.completion_tokens, durationMs);
+      const sessionId = (req as any).sessionId || `chat-${Date.now()}`;
+      recordSession(sessionId, undefined, undefined, pipelineResult.model || params.model);
+    } catch (_) { /* don't fail request for logging */ }
 
-      // Track chunk metadata for normalization
-      let chunkId: string | null = null;
-      let chunkCreated: number | null = null;
-      let chunkModel: string | null = null;
-      const baseTimestamp = Math.floor(Date.now() / 1000);
+    res.json(response);
+    return;
 
-      // Handle the stream - it could be parsed chunks or raw SSE
-      if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
-        // Stream is async iterable (parsed chunks)
-        for await (const rawChunk of stream as any) {
-          const parsedChunk = typeof rawChunk === 'string' ? tryParseJSON(rawChunk) : rawChunk;
-          const chunkData = parsedChunk || {};
-
-          // Update tracked metadata from current chunk if available
-          if (chunkData.id) chunkId = chunkData.id;
-          if (chunkData.created) chunkCreated = chunkData.created;
-          if (chunkData.model) chunkModel = chunkData.model;
-
-          // Normalize chunk to ensure required fields are present
-          const normalizedChunk = {
-            id: chunkData.id || chunkId || `chatcmpl-${baseTimestamp}-${Date.now()}`,
-            object: chunkData.object || 'chat.completion.chunk',
-            created: chunkData.created || chunkCreated || baseTimestamp,
-            model: chunkData.model || chunkModel || params.model || 'unknown',
-            choices: Array.isArray(chunkData.choices) ? chunkData.choices : [],
-          };
-
-          res.write(`data: ${JSON.stringify(normalizedChunk)}\n\n`);
-        }
-      } else if (stream && typeof stream.getReader === 'function') {
-        // Stream is a ReadableStream (raw SSE) - need to parse manually
-        const reader = stream.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('data: ')) {
-              const data = trimmed.slice(6);
-              if (data === '[DONE]') {
-                res.write('data: [DONE]\n\n');
-                continue;
-              }
-
-              const parsedChunk = tryParseJSON(data);
-              if (parsedChunk) {
-                const chunkData = parsedChunk || {};
-
-                // Update tracked metadata from current chunk if available
-                if (chunkData.id) chunkId = chunkData.id;
-                if (chunkData.created) chunkCreated = chunkData.created;
-                if (chunkData.model) chunkModel = chunkData.model;
-
-                // Normalize chunk to ensure required fields are present
-                const normalizedChunk = {
-                  id: chunkData.id || chunkId || `chatcmpl-${baseTimestamp}-${Date.now()}`,
-                  object: chunkData.object || 'chat.completion.chunk',
-                  created: chunkData.created || chunkCreated || baseTimestamp,
-                  model: chunkData.model || chunkModel || params.model || 'unknown',
-                  choices: Array.isArray(chunkData.choices) ? chunkData.choices : [],
-                };
-
-                res.write(`data: ${JSON.stringify(normalizedChunk)}\n\n`);
-              }
-            }
-          }
-        }
-      }
-
-      res.write('data: [DONE]\n\n');
-      res.end();
-
-      groqService.addLog({
-        method: 'POST',
-        path: '/v1/chat/completions',
-        model: params.model || 'auto',
-        status: 200,
-        duration_ms: Date.now() - startTime,
-        tokens: 0,
-        success: true,
-      });
-    } else {
-      const completion = await groqService.createChatCompletion(params);
-      const duration = Date.now() - startTime;
-
-      // Use ResponseNormalizer for consistent handling across all providers
-      const normalized: any = ResponseNormalizer.normalize(completion, params.model || 'unknown');
-
-      // Strip think blocks and handle reasoning_content fallback
-      if (Array.isArray(normalized.choices)) {
-        for (const c of normalized.choices) {
-          if (typeof c.message?.content === 'string') {
-            c.message.content = ResponseNormalizer.stripThinkBlocks(c.message.content);
-          }
-          // Handle reasoning-only models (e.g., MiMo) that put response in reasoning_content
-          const content = c.message?.content;
-          if ((content === null || content === undefined || content === '') && c.message?.reasoning_content) {
-            c.message.content = c.message.reasoning_content;
-            delete c.message.reasoning_content;
-          }
-        }
-      }
-
-      const usage = normalized?.usage || {};
-      const promptTokens = usage.prompt_tokens || 0;
-      const completionTokens = usage.completion_tokens || 0;
-      try {
-        logUsage(params.model || 'unknown', promptTokens, completionTokens, duration);
-        const sessionId = (req as any).sessionId || `chat-${Date.now()}`;
-        recordSession(sessionId, undefined, undefined, params.model);
-      } catch (_) { /* don't fail request for logging */ }
-
-      const responseData = {
-        ...normalized,
-        usage: { ...usage },
-      };
-
-      res.json(responseData);
-    }
-  } catch (error: any) {
-    const duration = Date.now() - startTime;
-    console.error('❌ Chat completion error:', error.message);
-
-    // Preserve original status code from Groq when available
-    const statusCode = error.status || error.statusCode || 500;
-
-    // Map Groq error codes/types to OpenAI-compatible error types
-    const errType = (statusCode === 413 || statusCode === 429)
-      ? 'rate_limit_error'
-      : (statusCode === 400 ? 'invalid_request_error' : 'server_error');
-
-    const errCode = (statusCode === 413 || statusCode === 429)
-      ? 'rate_limit_exceeded'
-      : (statusCode === 400 ? 'bad_request' : 'internal_error');
-
-    // Use 429 for all rate limit errors regardless of what Groq returns
-    const httpStatus = (statusCode === 413 || statusCode === 429) ? 429 : statusCode;
-
-    // Validate message body exists; if Groq returned a nested 413 body, extract original message
-    let message = error.message || 'Internal server error';
-    if (typeof message === 'string' && message.startsWith('413 ')) {
-      // Groq SDK wraps 413 body in the error message; try to extract the original error message
-      try {
-        const parsed = JSON.parse(message.substring(4));
-        if (parsed?.error?.message) message = parsed.error.message;
-      } catch { /* use raw message */ }
-    }
-
-    res.status(httpStatus).json({
-      error: {
-        message,
-        type: errType,
-        code: errCode,
-      }
+  } catch (err: any) {
+    console.error('❌ Chat completion error:', err.stack || err.message);
+    res.status(err.status || 500).json({
+      error: { message: err.message || 'Chat completion failed', type: 'server_error' },
     });
   }
 };

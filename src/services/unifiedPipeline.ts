@@ -22,7 +22,7 @@
  *   - No multiple pipelines (THIS is the one pipeline)
  */
 
-import { generateText, streamText, type ModelMessage, type Tool } from 'ai';
+import { generateText, streamText, type ModelMessage, type Tool, jsonSchema } from 'ai';
 import { getLanguageModel, getReasoningModel, resolveModelId } from '../providers/ai-sdk-registry';
 import { getIdentity } from './identityService';
 import { DiskRAGService } from './ragService';
@@ -51,6 +51,17 @@ export interface PipelineInput {
   maxOutputTokens?: number;
   temperature?: number;
 
+  // Tool support (OpenAI-compatible format — converted to AI SDK internally)
+  tools?: Array<{
+    type: 'function';
+    function: {
+      name: string;
+      description?: string;
+      parameters?: any;
+    };
+  }>;
+  tool_choice?: 'auto' | 'none' | 'required' | { type: 'function'; function: { name: string } };
+
   // Legacy compatibility
   legacy?: boolean;
 }
@@ -62,7 +73,7 @@ export interface PipelineOutput {
   model: string;
   choices: Array<{
     index: number;
-    message: { role: string; content: string };
+    message: { role: string; content: string; tool_calls?: any[] };
     finish_reason: string;
   }>;
   usage: {
@@ -81,6 +92,7 @@ export interface StreamPipelineOutput {
   id: string;
   model: string;
   stream: AsyncIterable<any>;
+  fullStream?: AsyncIterable<any>;
   conversation_id?: string;
 }
 
@@ -248,16 +260,30 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
   const isReasoningModel = modelId.includes('deepseek') || modelId.includes('r1');
   const model = isReasoningModel ? getReasoningModel(modelId) : getLanguageModel(modelId);
 
-  // 7. Call AI SDK generateText (Provider Truth)
-  const result = await generateText({
+  // 7. Convert tools (OpenAI format → AI SDK format)
+  const toolConfig = convertTools(input.tools, input.tool_choice);
+
+  // 8. Call AI SDK generateText (Provider Truth)
+  const generateParams: any = {
     model,
     messages: coreMessages,
     system: systemPrompt,
     maxOutputTokens: input.maxOutputTokens || 4096,
     temperature: input.temperature ?? 0.7,
-  });
+  };
 
-  // 8. Build OpenAI-compatible response (reasoning content PRESERVED)
+  if (toolConfig) {
+    generateParams.tools = toolConfig.tools;
+    if (toolConfig.toolChoice) {
+      generateParams.toolChoice = toolConfig.toolChoice;
+    }
+    // maxSteps for tool call loops — AI SDK will auto-loop tool calls
+    generateParams.maxSteps = input.maxSteps || 10;
+  }
+
+  const result = await generateText(generateParams);
+
+  // 9. Build OpenAI-compatible response (reasoning content PRESERVED)
   const output: PipelineOutput = {
     id: `chatcmpl-${crypto.randomUUID().slice(0, 12)}`,
     object: 'chat.completion',
@@ -278,7 +304,24 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
     },
   };
 
-  // 9. Preserve reasoning content (NEVER dropped)
+  // 10. Handle tool calls in response (AI SDK returns toolCalls in result)
+  if (result.toolCalls && result.toolCalls.length > 0) {
+    output.choices[0].message.tool_calls = result.toolCalls.map((tc: any) => ({
+      id: tc.toolCallId || `call_${crypto.randomUUID().slice(0, 8)}`,
+      type: 'function',
+      function: {
+        name: tc.toolName,
+        arguments: typeof tc.args === 'string' ? tc.args : JSON.stringify(tc.args || {}),
+      },
+    }));
+    output.tool_calls = result.toolCalls.map((tc: any) => tc.toolName);
+    // If content is empty but we have tool calls, this is expected
+    if (!output.choices[0].message.content && result.toolCalls.length > 0) {
+      output.choices[0].finish_reason = 'tool_calls';
+    }
+  }
+
+  // 11. Preserve reasoning content (NEVER dropped)
   // Architecture: reasoning models' thinking process is preserved in metadata
   if (result.reasoningText) {
     output.reasoning = result.reasoningText;
@@ -327,19 +370,33 @@ export async function runStreamingPipeline(
   const isReasoningModel = modelId.includes('deepseek') || modelId.includes('r1');
   const model = isReasoningModel ? getReasoningModel(modelId) : getLanguageModel(modelId);
 
-  // 6. Call AI SDK streamText (Provider Truth — single call, no double-call)
-  const result = streamText({
+  // 6. Convert tools (OpenAI format → AI SDK format)
+  const toolConfig = convertTools(input.tools, input.tool_choice);
+
+  // 7. Call AI SDK streamText (Provider Truth — single call, no double-call)
+  const streamParams: any = {
     model,
     messages: coreMessages,
     system: systemPrompt,
     maxOutputTokens: input.maxOutputTokens || 4096,
     temperature: input.temperature ?? 0.7,
-  });
+  };
+
+  if (toolConfig) {
+    streamParams.tools = toolConfig.tools;
+    if (toolConfig.toolChoice) {
+      streamParams.toolChoice = toolConfig.toolChoice;
+    }
+    streamParams.maxSteps = input.maxSteps || 10;
+  }
+
+  const result = streamText(streamParams);
 
   return {
     id: `chatcmpl-${crypto.randomUUID().slice(0, 12)}`,
     model: modelId,
     stream: result.textStream,
+    fullStream: result.fullStream,
     conversation_id: input.conversationId,
   };
 }
@@ -360,6 +417,38 @@ export async function routeModel(
   }
 
   return { model: 'opencode:deepseek-v4-flash-free', needsRag: false };
+}
+
+// ─── Tool Conversion: OpenAI format → AI SDK format ──────────
+
+function convertTools(
+  openaiTools?: PipelineInput['tools'],
+  tool_choice?: PipelineInput['tool_choice'],
+): { tools?: Record<string, Tool<any, any>>; toolChoice?: any } | undefined {
+  if (!openaiTools || openaiTools.length === 0) return undefined;
+
+  const tools: Record<string, Tool<any, any>> = {};
+  for (const t of openaiTools) {
+    if (t.type === 'function' && t.function?.name) {
+      const schema = t.function.parameters || { type: 'object', properties: {} };
+      tools[t.function.name] = {
+        description: t.function.description || '',
+        inputSchema: jsonSchema(schema),
+      };
+    }
+  }
+
+  if (Object.keys(tools).length === 0) return undefined;
+
+  let sdkToolChoice: any = undefined;
+  if (tool_choice === 'auto') sdkToolChoice = 'auto';
+  else if (tool_choice === 'none') sdkToolChoice = 'none';
+  else if (tool_choice === 'required') sdkToolChoice = 'any';
+  else if (tool_choice && typeof tool_choice === 'object' && 'function' in tool_choice) {
+    sdkToolChoice = { type: 'tool', toolName: tool_choice.function.name };
+  }
+
+  return { tools, toolChoice: sdkToolChoice };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────

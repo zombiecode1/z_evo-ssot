@@ -2,15 +2,12 @@
 // Runs on startup to discover providers from environment variables,
 // sync their models, and register their capabilities/tools.
 // This ensures the database is always populated with available providers.
+//
+// Architecture: Uses AI SDK Provider Registry (ai-sdk-registry.ts) for model calls.
+// Old provider implementations (base.provider.ts, implementations/) are NO LONGER USED.
+// This file only handles DB population (providers, models, tools).
 
 import { getStateDb, upsertProvider, upsertProviderModel, upsertProviderTool, listProviders } from '../services/stateDb';
-import { getProviderRegistry } from '../providers/provider-registry';
-import { OpenCodeProvider } from '../providers/implementations/opencode.provider';
-import { GroqProvider } from '../providers/implementations/groq.provider';
-import { OpenAiProvider } from '../providers/implementations/openai.provider';
-import { GeminiProvider } from '../providers/implementations/gemini.provider';
-import { AnthropicProvider } from '../providers/implementations/anthropic.provider';
-import { ProviderConfig } from '../providers/types';
 
 // ─── Provider Definitions ────────────────────────────────
 // Each provider defines how to discover it from env vars
@@ -185,27 +182,6 @@ const KNOWN_MODELS: Record<string, Array<{ id: string; category: string; context
   ],
 };
 
-// ─── Provider Factory Registration ──────────────────────
-// Maps provider type strings to their implementation classes.
-// This must run before any provider instances are created.
-
-function registerProviderFactories(): void {
-  const registry = getProviderRegistry();
-
-  // Register specific factories for providers that need custom handling
-  registry.registerFactory('opencode', (config: ProviderConfig) => new OpenCodeProvider(config));
-  registry.registerFactory('groq', (config: ProviderConfig) => new GroqProvider(config));
-  registry.registerFactory('openai', (config: ProviderConfig) => new OpenAiProvider(config));
-  registry.registerFactory('gemini', (config: ProviderConfig) => new GeminiProvider(config));
-  registry.registerFactory('anthropic', (config: ProviderConfig) => new AnthropicProvider(config));
-  registry.registerFactory('ollama', (config: ProviderConfig) => new OpenAiProvider(config)); // Ollama is OpenAI-compatible
-
-  // Fallback: any unknown type uses OpenAI-compatible format
-  registry.setDefaultFactory((config: ProviderConfig) => new OpenAiProvider(config));
-
-  console.log('✅ Registered provider factories: opencode, groq, openai, gemini, anthropic, ollama');
-}
-
 // ─── Bootstrap Function ──────────────────────────────────
 
 export async function bootstrapProviders(): Promise<{
@@ -216,10 +192,6 @@ export async function bootstrapProviders(): Promise<{
 }> {
   const db = getStateDb();
   if (!db) return { discovered: 0, synced: 0, toolsRegistered: 0, errors: ['Database not initialized'] };
-
-  // ─── Register Provider Factories ─────────────────────
-  // This is critical: without factories, the registry can't create provider instances
-  registerProviderFactories();
 
   const result = { discovered: 0, synced: 0, toolsRegistered: 0, errors: [] as string[] };
 
