@@ -1,0 +1,24 @@
+{
+  "_comment": "VS Code MCP Configuration for ZombieCoder",
+  "_usage_http": "Requires running server: node dist/index.js (port 9999)",
+  "_usage_stdio": "Spawns MCP server as child process (no server needed)",
+  
+  "mcp": {
+    "servers": {
+      "zombiecoder-http": {
+        "type": "http",
+        "url": "http://localhost:9999/mcp",
+        "_description": "Connect to running ZombieCoder server"
+      },
+      "zombiecoder-stdio": {
+        "command": "node",
+        "args": ["dist/mcp/server-entry.js"],
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "WORKSPACE_DIR": "${workspaceFolder}"
+        },
+        "_description": "Spawn MCP server directly (standalone)"
+      }
+    }
+  }
+}

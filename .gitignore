@@ -1,0 +1,94 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ZombieCoder Proxi Bridge — .gitignore
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── Dependencies ───────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ─── Build Output ───────────────────────────────────────────────────────────
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ─── Environment & Secrets ──────────────────────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# ─── Database Files ─────────────────────────────────────────────────────────
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ─── Logs ───────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── Runtime Files ──────────────────────────────────────────────────────────
+.zombiecoder/
+*.pid
+*.seed
+*.pid.lock
+
+# ─── OS Files ───────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ─── IDE Files ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+*.launch
+
+# ─── TypeScript Cache ───────────────────────────────────────────────────────
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# ─── Coverage ───────────────────────────────────────────────────────────────
+coverage/
+*.lcov
+
+# ─── Temporary Files ────────────────────────────────────────────────────────
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ─── Package Lock (optional — uncomment if needed) ──────────────────────────
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ─── LangChainAgent Specific ────────────────────────────────────────────────
+src/LangChainAgent/dist/
+src/LangChainAgent/node_modules/
+src/LangChainAgent/*.db
+src/LangChainAgent/.zombiecoder/
+
+# ─── Large Binary Files ─────────────────────────────────────────────────────
+embedding/
+*.exe
+*.gguf
+*.safetensors

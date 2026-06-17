@@ -1,0 +1,12 @@
+{
+  "_comment": "Windsurf MCP Configuration for ZombieCoder",
+  
+  "mcpServers": {
+    "zombiecoder-stdio": {
+      "command": "node",
+      "args": ["dist/mcp/server-entry.js"],
+      "cwd": "${workspaceFolder}",
+      "_description": "Spawn MCP server directly (standalone)"
+    }
+  }
+}

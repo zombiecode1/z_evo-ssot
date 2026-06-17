@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZombieCoder Agent System - ইন্টিগ্রেশন রিপোর্ট</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.8; color: #333; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 40px; text-align: center; }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        header .tagline { font-size: 1.2em; opacity: 0.9; font-style: italic; }
+        .content { padding: 40px; }
+        .section { margin-bottom: 40px; padding: 30px; background: #f8f9fa; border-radius: 15px; border-left: 5px solid #667eea; }
+        .section h2 { color: #1a1a2e; margin-bottom: 20px; font-size: 1.8em; }
+        .section h3 { color: #16213e; margin: 20px 0 10px 0; font-size: 1.3em; }
+        .section p { margin-bottom: 15px; text-align: justify; }
+        .agent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0; }
+        .agent-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease; border-top: 4px solid #667eea; }
+        .agent-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .agent-card h4 { color: #1a1a2e; margin-bottom: 15px; font-size: 1.2em; }
+        .agent-card .icon { font-size: 2em; margin-bottom: 15px; }
+        .agent-card ul { list-style: none; padding: 0; }
+        .agent-card ul li { padding: 5px 0; padding-left: 20px; position: relative; }
+        .agent-card ul li::before { content: "\2713"; position: absolute; left: 0; color: #28a745; font-weight: bold; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .comparison-table th { background: #1a1a2e; color: white; padding: 15px; text-align: left; }
+        .comparison-table td { padding: 15px; border-bottom: 1px solid #eee; }
+        .comparison-table tr:nth-child(even) { background: #f8f9fa; }
+        .comparison-table tr:hover { background: #e9ecef; }
+        .highlight-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 12px; margin: 20px 0; }
+        .highlight-box h3 { color: white; margin-bottom: 15px; }
+        .code-block { background: #1a1a2e; color: #f8f9fa; padding: 20px; border-radius: 10px; font-family: 'Courier New', monospace; overflow-x: auto; margin: 15px 0; font-size: 0.9em; white-space: pre-wrap; }
+        .rating { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin: 5px; }
+        .rating.high { background: #d4edda; color: #155724; }
+        .rating.medium { background: #fff3cd; color: #856404; }
+        .footer { background: #1a1a2e; color: white; padding: 30px; text-align: center; }
+        .footer .owner-info { margin-top: 15px; opacity: 0.8; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 0.8em; font-weight: bold; margin: 2px; }
+        .badge.primary { background: #667eea; color: white; }
+        .badge.success { background: #28a745; color: white; }
+        .badge.warning { background: #ffc107; color: #333; }
+        .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .pros { background: #d4edda; padding: 20px; border-radius: 10px; }
+        .cons { background: #f8d7da; padding: 20px; border-radius: 10px; }
+        .pros h4 { color: #155724; }
+        .cons h4 { color: #721c24; }
+        .pros ul, .cons ul { padding-left: 20px; }
+        .pros li { color: #155724; margin: 5px 0; }
+        .cons li { color: #721c24; margin: 5px 0; }
+        ul.feature-list { padding-left: 20px; }
+        ul.feature-list li { margin: 8px 0; }
+        @media (max-width: 768px) { header h1 { font-size: 1.8em; } .content { padding: 20px; } .section { padding: 20px; } .agent-grid { grid-template-columns: 1fr; } .pros-cons { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ZombieCoder Agent System</h1>
+            <p class="tagline">"যেখানে কোড ও কথা বলে"</p>
+            <p style="margin-top: 15px; opacity: 0.8;">Proxi Bridge ইন্টিগ্রেশন রিপোর্ট ও কোড বিশ্লেষণ</p>
+        </header>
+        <div class="content">
+
+            <div class="section">
+                <h2>পরিচিতি</h2>
+                <p>ZombieCoder Agent Module হলো একটি <strong>প্লাগ-অ্যান্ড-প্লে AI এজেন্ট প্যাকেজ</strong> যা যেকোনো প্রজেক্টের সাথে সহজেই ইন্টিগ্রেট করা যায়। এটি ৫টি বিশেষজ্ঞ AI এজেন্ট নিয়ে তৈরি, যারা সফটওয়্যার ডেভেলপমেন্টের বিভিন্ন পর্যায়ে কাজ করে।</p>
+                <p>এই রিপোর্টে আমরা দেখবো কিভাবে এই এজেন্ট সিস্টেমটি আমাদের <strong>Proxi Bridge Server</strong> (http://localhost:9999) এর সাথে ইন্টিগ্রেট করা যায়।</p>
+            </div>
+
+            <div class="section">
+                <h2>এজেন্ট সিস্টেম বিশ্লেষণ</h2>
+                <p>ZombieCoder এর এজেন্ট সিস্টেমটি ৫টি স্বতন্ত্র এজেন্ট নিয়ে গঠিত:</p>
+                <div class="agent-grid">
+                    <div class="agent-card">
+                        <div class="icon">Solution Architect</div>
+                        <h4>SolutionArchitectAgent</h4>
+                        <p><strong>মডেল:</strong> nemotron-3-ultra-free</p>
+                        <p><strong>কাজ:</strong> সিস্টেম ডিজাইন, আর্কিটেকচার পরিকল্পনা</p>
+                        <ul><li>সিস্টেম আর্কিটেকচার ডিজাইন</li><li>প্রযুক্তি নির্বাচন</li><li>ঝুঁকি মূল্যায়ন</li><li>ADR তৈরি</li></ul>
+                    </div>
+                    <div class="agent-card">
+                        <div class="icon">Development Engineer</div>
+                        <h4>DevelopmentEngineerAgent</h4>
+                        <p><strong>মডেল:</strong> north-mini-code-free</p>
+                        <p><strong>কাজ:</strong> কোড লেখা, বাগ ফিক্স, রিফ্যাক্টরিং</p>
+                        <ul><li>ফিচার ডেভেলপমেন্ট</li><li>বাগ রিজোলিউশন</li><li>কোড রিভিউ</li><li>ইন্টিগ্রেশন কাজ</li></ul>
+                    </div>
+                    <div class="agent-card">
+                        <div class="icon">Quality Assurance</div>
+                        <h4>QualityAssuranceAgent</h4>
+                        <p><strong>মডেল:</strong> big-pickle</p>
+                        <p><strong>কাজ:</strong> টেস্টিং, কোয়ালিটি রিপোর্ট</p>
+                        <ul><li>টেস্ট প্ল্যান তৈরি</li><li>বাগ বিশ্লেষণ</li><li>রিগ্রেশন টেস্টিং</li><li>কোয়ালিটি রিপোর্ট</li></ul>
+                    </div>
+                    <div class="agent-card">
+                        <div class="icon">Documentation</div>
+                        <h4>DocumentationAgent</h4>
+                        <p><strong>মডেল:</strong> mimo-v2.5-free</p>
+                        <p><strong>কাজ:</strong> ডকুমেন্টেশন, API গাইড</p>
+                        <ul><li>টেকনিক্যাল ডকুমেন্ট</li><li>API ডকুমেন্টেশন</li><li>ইউজার গাইড</li><li>রানবুক</li></ul>
+                    </div>
+                    <div class="agent-card">
+                        <div class="icon">Operations</div>
+                        <h4>OperationsAgent</h4>
+                        <p><strong>মডেল:</strong> nemotron-3-ultra-free</p>
+                        <p><strong>কাজ:</strong> ডেপ্লয়মেন্ট, মনিটরিং</p>
+                        <ul><li>ডেপ্লয়মেন্ট প্ল্যানিং</li><li>মনিটরিং সিস্টেম</li><li>ইন্সিডেন্ট রেসপন্স</li><li>ব্যাকআপ স্ট্র্যাটেজি</li></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>কোড অথেন্টিসিটি ও গ্রহণযোগ্যতা মূল্যায়ন</h2>
+                <div class="highlight-box">
+                    <h3>সামগ্রিক মূল্যায়ন: অত্যন্ত গ্রহণযোগ্য</h3>
+                    <p>ZombieCoder Agent System এর কোডগুলো <strong>অত্যন্ত অথেন্টিক ও গ্রহণযোগ্য</strong>। কোডটি পেশাদার মানের, ভালোভাবে স্ট্রাকচার্ড এবং আধুনিক TypeScript প্যাটার্ন অনুসরণ করে লেখা।</p>
+                </div>
+                <table class="comparison-table">
+                    <thead><tr><th>বৈশিষ্ট্য</th><th>মূল্যায়ন</th><th>স্কোর</th></tr></thead>
+                    <tbody>
+                        <tr><td>কোড স্ট্রাকচার</td><td>খুবই ভালো - স্পষ্ট সেপারেশন অফ কনসার্নস, মডুলার ডিজাইন</td><td><span class="rating high">9/10</span></td></tr>
+                        <tr><td>এরর হ্যান্ডলিং</td><td>দুর্দান্ত - try-catch ও fallback mechanism সুন্দরভাবে কাজ করে</td><td><span class="rating high">9/10</span></td></tr>
+                        <tr><td>টাইপ সেফটি</td><td>ভালো - TypeScript interfaces ও strict mode ব্যবহার করা হয়েছে</td><td><span class="rating high">8/10</span></td></tr>
+                        <tr><td>পরিচয় ব্যবস্থাপনা</td><td>দুর্দান্ত - Singleton pattern, immutable identity.json</td><td><span class="rating high">9/10</span></td></tr>
+                        <tr><td>কনফিগারেশন</td><td>ভালো - কেন্দ্রীয় agent.config.ts, environment variables support</td><td><span class="rating high">8/10</span></td></tr>
+                        <tr><td>ডকুমেন্টেশন</td><td>খুবই ভালো - বাংলা ও ইংরেজি দুটো ভাষায় সম্পূর্ণ ডকুমেন্ট</td><td><span class="rating high">9/10</span></td></tr>
+                        <tr><td>AI SDK ব্যবহার</td><td>ভালো - Vercel AI SDK + OpenAI compatible client</td><td><span class="rating high">8/10</span></td></tr>
+                        <tr><td>রিয়াল-টাইম স্ট্রিমিং</td><td>সাপোর্ট আছে - streamText method পাওয়া যায়</td><td><span class="rating high">8/10</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>Proxi Bridge এর সাথে তুলনা</h2>
+                <p>আমাদের Proxi Bridge Server এ ইতিমধ্যে একটি এজেন্ট সিস্টেম আছে। দুটো সিস্টেমের তুলনা নিচে দেওয়া হলো:</p>
+                <table class="comparison-table">
+                    <thead><tr><th>বৈশিষ্ট্য</th><th>Proxi Bridge (বিদ্যমান)</th><th>ZombieCoder Agent (নতুন)</th></tr></thead>
+                    <tbody>
+                        <tr><td>এজেন্ট সংখ্যা</td><td>সাধারণ agent chat endpoint</td><td>৫টি বিশেষজ্ঞ এজেন্ট</td></tr>
+                        <tr><td>মডেল রাউটিং</td><td>MawlanaRouter (স্মার্ট রাউটিং)</td><td>Agent-specific model mapping + fallback</td></tr>
+                        <tr><td>RAG সিস্টেম</td><td>SSOT.md based disk RAG</td><td>ভবিষ্যতের জন্য plan আছে</td></tr>
+                        <tr><td>পরিচয় ব্যবস্থাপনা</td><td>System prompt দিয়ে anchoring</td><td>Immutable identity.json + IdentityService</td></tr>
+                        <tr><td>ফলব্যাক</td><td>মডেল fallback</td><td>Dual-controller (OpenCode + Universal LLM)</td></tr>
+                        <tr><td>ওপেন সোর্স</td><td>হ্যাঁ</td><td>Proprietary (Local Freedom Protocol)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>কোড ফাইল স্ট্রাকচার বিশ্লেষণ</h2>
+                <p>মোট <strong>১২টি ফাইল</strong> এবং <strong>৫টি ডাইরেক্টরি</strong> রয়েছে:</p>
+                <div class="code-block">LangChainAgent/
+  agent.config.ts          -- কেন্দ্রীয় কনফিগ (মডেল, API, প্রোভাইডার)
+  identity.json            -- অপরিবর্তনীয় পরিচয় ফাইল
+  index.ts                 -- মূল export gateway
+  package.json             -- প্যাকেজ তথ্য (v1.1.0)
+  tsconfig.json            -- TypeScript কনফিগ
+  .env.example             -- এনভায়রনমেন্ট ভেরিয়েবল
+  README.md                -- ইংরেজি ডকুমেন্ট
+  src/
+    agent/
+      SolutionArchitectAgent.ts      -- স্থপতি এজেন্ট (১৬৭ লাইন)
+      DevelopmentEngineerAgent.ts    -- ডেভেলপার এজেন্ট (২১৯ লাইন)
+      QualityAssuranceAgent.ts       -- টেস্টার এজেন্ট (২৭৩ লাইন)
+      DocumentationAgent.ts          -- লেখক এজেন্ট (২৮৫ লাইন)
+      OperationsAgent.ts             -- অপারেটর এজেন্ট (২৭৫ লাইন)
+    controllers/
+      OpenCodeController.ts          -- OpenCode Zen API handler (৮০ লাইন)
+      UniversalLLMController.ts      -- Fallback LLM handler (৬০ লাইন)
+    identity/
+      IdentityService.ts             -- পরিচয় ব্যবস্থাপনা (৮৬ লাইন)
+  docs/
+    README_BANGLA.md                 -- বাংলা গাইড
+    README_TECHNICAL.md              -- টেকনিক্যাল ডকুমেন্ট</div>
+            </div>
+
+            <div class="section">
+                <h2>ইন্টিগ্রেশন পরিকল্পনা</h2>
+                <p>ZombieCoder Agent কে Proxi Bridge এর সাথে ইন্টিগ্রেট করার জন্য নিচের ধাপগুলো অনুসরণ করতে হবে:</p>
+
+                <h3>ধাপ ১: Proxi Bridge এর Agent Endpoint এর সাথে সংযোগ</h3>
+                <p>বিদ্যমান Proxi Bridge এ <code>POST /v1/agent/chat</code> endpoint আছে। ZombieCoder এর প্রতিটি এজেন্টকে এই endpoint এর মাধ্যমে route করা যায়।</p>
+                <div class="code-block">// Proxi Bridge endpoint
+POST http://localhost:9999/v1/agent/chat
+{
+  "model": "mimo-v2.5-free",
+  "messages": [{"role": "user", "content": "..."}],
+  "agent_type": "solution_architect"  // নতুন agent_type প্যারামিটার
+}</div>
+
+                <h3>ধাপ ২: UniversalLLMController কে Proxi Bridge এ রুট করা</h3>
+                <p>ZombieCoder এর UniversalLLMController কে পরিবর্তন করে Proxi Bridge কে fallback হিসেবে ব্যবহার করা যায়:</p>
+                <div class="code-block">// UniversalLLMController.ts - পরিবর্তিত সংস্করণ
+const proxiClient = createOpenAI({
+  baseURL: "http://localhost:9999/v1",  // Proxi Bridge
+  apiKey: "local-proxi",
+});
+
+// Fallback chain:
+// 1. OpenCode Zen (Primary)
+// 2. Proxi Bridge (Secondary)
+// 3. Ollama (Tertiary)</div>
+
+                <h3>ধাপ ৩: Identity Anchoring একত্রীকরণ</h3>
+                <p>দুটো সিস্টেমেই identity anchoring আছে। Proxi Bridge এ system prompt দিয়ে, ZombieCoder এ identity.json দিয়ে। এদের একত্র করতে হবে:</p>
+                <div class="code-block">// Proxi Bridge এর SSOT.md তে ZombieCoder identity যোগ করা
+// + ZombieCoder এর IdentityService থেকে Proxi Bridge এ পাঠানো</div>
+
+                <h3>ধাপ ৪: নতুন Agent Chat API তৈরি</h3>
+                <p>Proxi Bridge তৈরি করুক এমন একটি endpoint যেখানে agent_type অনুযায়ী সঠিক ZombieCoder agent নির্বাচিত হবে:</p>
+                <div class="code-block">// নতুন endpoint: /v1/agent/specialist
+POST http://localhost:9999/v1/agent/specialist
+{
+  "agent_type": "development_engineer",
+  "task": "fixBug",
+  "params": {
+    "bugDescription": "Login form validation error",
+    "errorCode": "ERR_VALIDATION_001",
+    "errorMessage": "Email field accepts invalid format"
+  }
+}</div>
+
+                <h3>ধাপ ৫: RAG সিস্টেম ইন্টিগ্রেশন</h3>
+                <p>Proxi Bridge এর SSOT.md based RAG সিস্টেমকে ZombieCoder এর agent গুলোর সাথে যুক্ত করতে হবে, যাতে প্রজেক্টের ডকুমেন্টেশন থেকে context নিয়ে কাজ করতে পারে।</p>
+            </div>
+
+            <div class="section">
+                <h2>কোডের শক্তি ও দুর্বলতা</h2>
+                <div class="pros-cons">
+                    <div class="pros">
+                        <h4>শক্তি (Strengths)</h4>
+                        <ul>
+                            <li>মডুলার ও স্কেলেবল আর্কিটেকচার</li>
+                            <li>Dual-controller fallback system খুবই শক্তিশালী</li>
+                            <li>Immutable identity.json দিয়ে পরিচয় সুরক্ষা</li>
+                            <li>Vercel AI SDK ব্যবহার - আধুনিক ও দ্রুত</li>
+                            <li>প্রতিটি এজেন্টের জন্য specific system prompt</li>
+                            <li>বাংলা ও ইংরেজি দুই ভাষায় সম্পূর্ণ ডকুমেন্ট</li>
+                            <li>Plugin-and-play design - যেকোনো প্রজেক্টে কাজ করবে</li>
+                            <li>স্পষ্ট TypeScript interfaces ও types</li>
+                            <li>Singleton pattern ব্যবহার করেছে (IdentityService)</li>
+                        </ul>
+                    </div>
+                    <div class="cons">
+                        <h4>দুর্বলতা ও উন্নতির সুযোগ</h4>
+                        <ul>
+                            <li>RAG system এখনো বাস্তবায়িত হয়নি (Future plan হিসেবে আছে)</li>
+                            <li>Memory system (agent_memory.db) এখনো implement হয়নি</li>
+                            <li>MCP transport integration এখনো নেই</li>
+                            <li>Proxi Bridge এর সাথে সরাসরি integration code নেই</li>
+                            <li>Unit tests তৈরি হয়নি (Jest configured কিন্তু test file নেই)</li>
+                            <li>SSE/Streaming response format Proxi Bridge এর সাথে match করে না</li>
+                            <li>Agent-level caching mechanism নেই</li>
+                            <li>Rate limiting implementation নেই</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>প্রযুক্তি স্ট্যাক বিশ্লেষণ</h2>
+                <table class="comparison-table">
+                    <thead><tr><th>কম্পোনেন্ট</th><th>ব্যবহৃত প্রযুক্তি</th><th>মূল্যায়ন</th></tr></thead>
+                    <tbody>
+                        <tr><td>Language</td><td>TypeScript 5.0+</td><td><span class="rating high">উত্তম</span></td></tr>
+                        <tr><td>Runtime</td><td>Node.js 18+</td><td><span class="rating high">উত্তম</span></td></tr>
+                        <tr><td>AI SDK</td><td>Vercel AI SDK (ai v3.0)</td><td><span class="rating high">শ্রেষ্ঠ</span></td></tr>
+                        <tr><td>LLM Client</td><td>@ai-sdk/openai-compatible</td><td><span class="rating high">শ্রেষ্ঠ</span></td></tr>
+                        <tr><td>Identity</td><td>JSON file + Singleton Service</td><td><span class="rating high">ভালো</span></td></tr>
+                        <tr><td>Config</td><td>TypeScript config object</td><td><span class="rating high">ভালো</span></td></tr>
+                        <tr><td>Testing</td><td>Jest (configured, no tests)</td><td><span class="rating medium">মাঝারি</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>সারসংক্ষেপ ও সুপারিশ</h2>
+                <div class="highlight-box">
+                    <h3>চূড়ান্ত মতামত</h3>
+                    <p>ZombieCoder Agent System এর কোড <strong>অত্যন্ত মানসম্মত ও অথেন্টিক</strong>। এটি একটি ভালোভাবে পরিকল্পিত, মডুলার এবং স্কেলেবল সিস্টেম।</p>
+                    <p style="margin-top: 15px;"><strong>Proxi Bridge এর সাথে ইন্টিগ্রেশনের জন্য:</strong></p>
+                    <ul style="padding-left: 20px; margin-top: 10px;">
+                        <li>UniversalLLMController কে Proxi Bridge endpoint এ রুট করুন</li>
+                        <li>Proxi Bridge এর agent/chat endpoint এ agent_type parameter যোগ করুন</li>
+                        <li>দুই সিস্টেমের identity anchoring একত্র করুন</li>
+                        <li>ZombieCoder এর agents কে Proxi Bridge এর MawlanaRouter দিয়ে route করুন</li>
+                        <li>RAG সিস্টেম Proxi Bridge এর SSOT.md থেকে পরিচালিত করুন</li>
+                        <li>একটি unified agent gateway API তৈরি করুন</li>
+                    </ul>
+                </div>
+                <p style="margin-top: 20px;">এই ইন্টিগ্রেশনের ফলে একটি <strong>শক্তিশালী, বহু-ভাষিক, স্বয়ংক্রিয় AI এজেন্ট সিস্টেম</strong> তৈরি হবে যা বাংলাদেশের যেকোনো ডেভেলপারের জন্য অত্যন্ত কার্যকর হবে।</p>
+            </div>
+
+        </div>
+
+        <footer>
+            <h3>ZombieCoder Agent System</h3>
+            <p>"যেখানে কোড ও কথা বলে"</p>
+            <div class="owner-info">
+                <p>নির্মাতা: <strong>Sahon Srabon</strong> | Developer Zone | Dhaka, Bangladesh</p>
+                <p>যোগাযোগ: infi@smartearningplatformbd.net | https://smartearningplatformbd.net/</p>
+                <p style="margin-top: 10px; font-size: 0.9em;">প্রোক্সি ব্রিজ ইন্টিগ্রেশন রিপোর্ট - 2026</p>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

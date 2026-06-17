@@ -1,0 +1,21 @@
+{
+  "_comment": "Zed MCP Configuration for ZombieCoder",
+  
+  "context_servers": {
+    "zombiecoder-stdio": {
+      "command": "node",
+      "args": ["dist/mcp/server-entry.js"],
+      "cwd": "${workspaceFolder}",
+      "_description": "Spawn MCP server directly (standalone)"
+    }
+  },
+  "agent": {
+    "tool_permissions": {
+      "tools": {
+        "mcp:zombiecoder-stdio:verify_session": { "default": "allow" },
+        "mcp:zombiecoder-stdio:run_agent": { "default": "allow" },
+        "mcp:zombiecoder-stdio:ping_agent": { "default": "allow" }
+      }
+    }
+  }
+}

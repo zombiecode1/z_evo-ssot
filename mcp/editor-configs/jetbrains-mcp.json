@@ -1,0 +1,20 @@
+{
+  "_comment": "JetBrains MCP Configuration for ZombieCoder — Global Setup",
+  "_usage": "Copy this to ~/.config/JetBrains/GlobalConfig/ or IDE-specific config dir",
+
+  "mcpServers": {
+    "zombiecoder-bridge": {
+      "url": "http://localhost:9999/mcp",
+      "transport": "sse",
+      "enabled": true,
+      "_description": "ZombieCoder MCP via HTTP SSE — auto-discovers tools, RAG, identity"
+    },
+    "zombiecoder-stdio": {
+      "command": "node",
+      "args": ["dist/mcp/server-entry.js"],
+      "cwd": "${workspaceFolder}",
+      "enabled": false,
+      "_description": "Standalone MCP server (use if bridge not running)"
+    }
+  }
+}

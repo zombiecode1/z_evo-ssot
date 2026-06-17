@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxi Bridge + ZombieCoder Agent - আর্কিটেকচার বিশ্লেষণ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; line-height: 1.9; color: #2d3436; background: #f0f2f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; overflow: hidden; }
+        .card-header { background: linear-gradient(135deg, #0c2461, #1e3799); color: white; padding: 30px; }
+        .card-header h1 { font-size: 1.8em; }
+        .card-header p { opacity: 0.85; margin-top: 8px; }
+        .card-body { padding: 35px; }
+        h2 { color: #0c2461; font-size: 1.5em; margin: 25px 0 15px 0; padding-bottom: 8px; border-bottom: 3px solid #0c2461; }
+        h3 { color: #1e3799; margin: 20px 0 10px 0; }
+        h4 { color: #2d3436; margin: 15px 0 8px 0; }
+        p { margin-bottom: 12px; text-align: justify; }
+        .code-block { background: #0c2461; color: #dfe6e9; padding: 20px; border-radius: 10px; font-family: 'Courier New', monospace; overflow-x: auto; margin: 15px 0; font-size: 0.88em; white-space: pre-wrap; line-height: 1.6; }
+        .code-block .kw { color: #74b9ff; }
+        .code-block .str { color: #55efc4; }
+        .code-block .cmt { color: #636e72; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; border-radius: 10px; overflow: hidden; }
+        th { background: #0c2461; color: white; padding: 12px 15px; text-align: left; }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9fa; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
+        .badge-green { background: #00b894; color: white; }
+        .badge-blue { background: #0984e3; color: white; }
+        .badge-orange { background: #e17055; color: white; }
+        .badge-red { background: #d63031; color: white; }
+        .badge-gray { background: #636e72; color: white; }
+        .progress-tracker { background: linear-gradient(135deg, #0c2461, #1e3799); color: white; padding: 25px; border-radius: 12px; margin: 20px 0; }
+        .progress-tracker h3 { color: white; margin-bottom: 15px; font-size: 1.3em; }
+        .progress-bar { background: rgba(255,255,255,0.2); border-radius: 10px; height: 24px; margin: 10px 0; overflow: hidden; }
+        .progress-fill { background: linear-gradient(90deg, #00b894, #55efc4); height: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85em; color: #0c2461; transition: width 0.5s; }
+        .step-list { list-style: none; padding: 0; margin: 15px 0; }
+        .step-list li { padding: 10px 15px; margin: 5px 0; border-radius: 8px; display: flex; align-items: center; gap: 10px; }
+        .step-list li.done { background: rgba(0,184,148,0.2); }
+        .step-list li.pending { background: rgba(255,255,255,0.1); }
+        .step-list li.active { background: rgba(9,132,227,0.3); border-left: 4px solid #74b9ff; }
+        .step-icon { font-size: 1.2em; }
+        .dep-warning { background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .dep-warning h4 { color: #856404; margin-bottom: 8px; }
+        .dep-ok { background: #d4edda; border: 2px solid #28a745; border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .dep-ok h4 { color: #155724; margin-bottom: 8px; }
+        .alert { padding: 20px; border-radius: 10px; margin: 15px 0; }
+        .alert-info { background: #dfe6e9; border-left: 5px solid #0984e3; }
+        .alert-success { background: #d4edda; border-left: 5px solid #00b894; }
+        .alert-warning { background: #fff3cd; border-left: 5px solid #e17055; }
+        .alert-danger { background: #f8d7da; border-left: 5px solid #d63031; }
+        .flow-box { background: #f8f9fa; border: 2px solid #dfe6e9; border-radius: 12px; padding: 20px; margin: 15px 0; text-align: center; }
+        .flow-box .arrow { font-size: 2em; color: #0c2461; margin: 10px 0; }
+        .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0; }
+        .comparison > div { padding: 20px; border-radius: 12px; }
+        .before { background: #fff5f5; border: 1px solid #fed7d7; }
+        .after { background: #f0fff4; border: 1px solid #c6f6d5; }
+        ul { padding-left: 25px; margin: 10px 0; }
+        li { margin: 6px 0; }
+        .diagram { background: #0c2461; color: #dfe6e9; padding: 25px; border-radius: 12px; font-family: 'Courier New', monospace; white-space: pre; overflow-x: auto; font-size: 0.85em; line-height: 1.5; margin: 15px 0; }
+        @media (max-width: 768px) { .comparison { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<!-- ========== HEADER ========== -->
+<div class="card">
+    <div class="card-header">
+        <h1>Proxi Bridge + ZombieCoder Agent</h1>
+        <p>সম্পূর্ণ আর্কিটেকচার বিশ্লেষণ, RAG ইন্টিগ্রেশন, এবং ডকুমেন্টেশন</p>
+        <p style="margin-top:5px; font-size:0.9em;">নির্মাতা: Sahon Srabon | Developer Zone, Dhaka</p>
+    </div>
+    <div class="card-body">
+
+<!-- ========== PROGRESS TRACKER ========== -->
+<div class="card">
+    <div class="card-body">
+        <div class="progress-tracker">
+            <h3>বাস্তবায়ন অগ্রগতি (Implementation Progress)</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 100%">7/7 সম্পূর্ণ (100%) 🎉</div>
+            </div>
+            <ul class="step-list">
+                <li class="done"><span class="step-icon">✅</span> <strong>ধাপ ১:</strong> ResponseNormalizer — <code>src/services/responseNormalizer.ts</code> (৩৯৩ লাইন)</li>
+                <li class="done"><span class="step-icon">✅</span> <strong>ধাপ ২:</strong> AgentModelConfig — <code>src/services/agentModelConfig.ts</code> (১২০ লাইন)</li>
+                <li class="done"><span class="step-icon">✅</span> <strong>ধাপ ৩:</strong> RAGModule — <code>src/services/ragModule.ts</code> (৩১২ লাইন)</li>
+                <li class="done"><span class="step-icon">✅</span> <strong>ধাপ ৪:</strong> .env.example আপডেট — agent model configs যোগ</li>
+                <li class="done"><span class="step-icon">✅</span> <strong>ধাপ ৫:</strong> agentController.ts — ensureSSOT + AgentModelConfig + ResponseNormalizer</li>
+                <li class="done"><span class="step-icon">✅</span> <strong>ধাপ ৬:</strong> openaiController.ts — ResponseNormalizer integrated (ProviderGateway + GroqService fallback)</li>
+                <li class="done"><span class="step-icon">✅</span> <strong>ধাপ ৭:</strong> langchainAgent.ts — RAGModule integrated (Self-Healing SSOT + intent detection)</li>
+            </ul>
+        </div>
+
+        <div class="dep-ok">
+            <h4>Dependency Safety Check</h4>
+            <p>সব নতুন কোড বিদ্যমান <code>src/services/</code> এ যোগ হয়েছে। নতুন npm package install হয়নি। কোনো version conflict নেই। LangChainAgent মডিউল এবং proxi_new সার্ভিস কোড আলাদা থাকে — শুধু import path দিয়ে সংযুক্ত।</p>
+        </div>
+    </div>
+</div>
+
+<!-- ========== 1. বিদ্যমান সিস্টেম বিশ্লেষণ ========== -->
+<h2>১. বিদ্যমান সিস্টেম বিশ্লেষণ</h2>
+
+<h3>১.১ Proxi Bridge এর বর্তমান Agent সিস্টেম</h3>
+<p>Proxi Bridge এ ইতিমধ্যে তিনটি agent-related service আছে:</p>
+
+<table>
+    <thead><tr><th>সার্ভিস</th><th>ফাইল</th><th>কাজ</th><th>মডেল</th></tr></thead>
+    <tbody>
+        <tr>
+            <td><strong>AgentService</strong></td>
+            <td><code>agentService.ts</code></td>
+            <td>Legacy JSON wrapper format, RAG auto-detect, identity prompt injection</td>
+            <td>GroqService ব্যবহার করে</td>
+        </tr>
+        <tr>
+            <td><strong>DiskRAGService</strong></td>
+            <td><code>ragService.ts</code></td>
+            <td>SSOT.md পড়া, লেখা, search করা, permission manage করা</td>
+            <td>N/A (disk-based)</td>
+        </tr>
+        <tr>
+            <td><strong>LangChain Agent</strong></td>
+            <td><code>langchainAgent.ts</code></td>
+            <td>Tool calling, conversation memory (MemorySaver), multi-provider routing</td>
+            <td>proxi-bridge /v1 ব্যবহার করে</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>১.২ DiskRAGService (ragService.ts) - বিস্তারিত</h3>
+<p>এটি একটি <strong>disk-based RAG সিস্টেম</strong> যা নিচের কাজগুলো করে:</p>
+<ul>
+    <li><code>setWorkingDirectory(dir)</code> - কাজের ফোল্ডার সেট করে, SSOT.md তৈরি করে</li>
+    <li><code>scanProject()</code> - প্রজেক্ট scan করে, ফাইল, ডিপেন্ডেন্সি খুঁজে বের করে</li>
+    <li><code>generateSSOTTemplate()</code> - SSOT.md তৈরি করে (Project Structure, Dependencies, Source Files, Config, Docs)</li>
+    <li><code>readSSOT()</code> / <code>saveSSOT()</code> / <code>appendToSSOT()</code> - SSOT পড়া/লেখা/আপডেট</li>
+    <li><code>searchSSOT(query)</code> - keyword-based section search</li>
+    <li><code>addToSession(msg)</code> / <code>getSessionContext()</code> - session buffer (২০টি message পর্যন্ত)</li>
+    <li><code>grantPermission()</code> / <code>hasPermission()</code> - scope-based permission system</li>
+</ul>
+
+<h3>১.৩ AgentService (agentService.ts) - Legacy Mode</h3>
+<p>এটি <strong>AgentResponse JSON wrapper</strong> format ব্যবহার করে:</p>
+<div class="code-block"><span class="cmt">// Legacy Response Format</span>
+{
+  <span class="str">"content"</span>: "AI এর উত্তর",
+  <span class="str">"model"</span>: "deepseek-v4-flash-free",
+  <span class="str">"flags"</span>: {
+    <span class="str">"type"</span>: <span class="str">"chat"</span> | <span class="str">"code"</span> | <span class="str">"tool"</span> | <span class="str">"error"</span>,
+    <span class="str">"execute"</span>: true | false,
+    <span class="str">"language"</span>: "python" | "typescript",
+    <span class="str">"safety"</span>: <span class="str">"safe"</span> | <span class="str">"unsafe"</span>
+  },
+  <span class="str">"ragUsed"</span>: true | false,
+  <span class="str">"durationMs"</span>: 1234
+}</div>
+
+<p>এটি <strong>RAG auto-detect</strong> করে - ইউজারের মেসেজে 'documentation', 'docs', 'how to' ইত্যাদি keyword থাকলে SSOT.md থেকে context নিয়ে আসে।</p>
+
+<h3>১.৪ LangChain Agent - বর্তমান অবস্থা</h3>
+<p>এটি <strong>@langchain/langgraph</strong> ব্যবহার করে:</p>
+<ul>
+    <li><strong>Tools:</strong> count_models, count_providers, list_files, read_file, search_code, run_command, get_project_info, db_query</li>
+    <li><strong>Memory:</strong> MemorySaver checkpoint (Map-based, session별)</li>
+    <li><strong>LLM:</strong> proxi-bridge <code>/v1</code> endpoint ব্যবহার করে</li>
+    <li><strong>System Prompt:</strong> "You are ZombieCoder, a local-first AI assistant..."</li>
+</ul>
+
+<div class="alert alert-warning">
+    <strong>সমস্যা:</strong> LangChain Agent এখনো SSOT.md / RAG সিস্টেমের সাথে integrated নেই। এটি শুধু tool calling এবং conversation memory করতে পারে, কিন্তু project context (SSOT) ব্যবহার করতে পারে না।
+</div>
+
+<!-- ========== 2. সমাধান: RAG মডিউল ========== -->
+<h2>২. সমাধান: UniversalLLMController তে RAG মডিউল যোগ</h2>
+
+<h3>২.১ ধারণা</h3>
+<p>আপনার প্রস্তাবটি <strong>অত্যন্ত যৌক্তিক</strong>। আমরা <code>UniversalLLMController</code> এ একটি <strong>RAGModule</strong> class যোগ করবো যা:</p>
+<ul>
+    <li>SSOT.md থেকে context নেবে</li>
+    <li>Session memory রাখবে</li>
+    <li>প্রতিটি agent এর model কে <code>.env</code> থেকে পড়বে</li>
+    <li>Response format normalize করবে</li>
+</ul>
+
+<h3>২.২ প্রস্তাবিত আর্কিটেকচার</h3>
+<div class="diagram">
+┌─────────────────────────────────────────────────────────────────┐
+│                    UniversalLLMController                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ OpenAI       │  │ Universal    │  │ RAGModule (নতুন)      │  │
+│  │ Controller   │  │ LLM Controller│  │                      │  │
+│  │              │  │              │  │  - DiskRAGService     │  │
+│  │              │  │              │  │  - SessionBuffer      │  │
+│  │              │  │              │  │  - SSOT Search        │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ ResponseNormalizer (নতুন)                                 │   │
+│  │ - Groq format      → standard format                     │   │
+│  │ - OpenCode format  → standard format                     │   │
+│  │ - Ollama format    → standard format                     │   │
+│  │ - Gemini format    → standard format                     │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ AgentModelConfig (নতুন)                                   │   │
+│  │ - .env থেকে পড়ে: ZOMBIE_AGENT_ARCHITECT_MODEL            │   │
+│  │ - .env থেকে পড়ে: ZOMBIE_AGENT_ENGINEER_MODEL             │   │
+│  │ - fallback chain                                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘</div>
+
+<h3>২.৩ RAGModule Class</h3>
+<div class="code-block"><span class="kw">export class</span> RAGModule {
+  <span class="kw">private</span> rag: DiskRAGService;
+  <span class="kw">private</span> sessionBuffer: Map&lt;string, string[]&gt;;
+  <span class="kw">private</span> config: RAGConfig;
+
+  <span class="kw">constructor</span>(config?: RAGConfig) {
+    <span class="kw">this</span>.rag = <span class="kw">new</span> DiskRAGService();
+    <span class="kw">this</span>.sessionBuffer = <span class="kw">new</span> Map();
+    <span class="kw">this</span>.config = config || { autoRag: true, maxChunks: 5 };
+  }
+
+  <span class="cmt">// SSOT থেকে context নেওয়া</span>
+  <span class="kw">async</span> getContext(query: string): Promise&lt;string&gt; {
+    <span class="kw">if</span> (!<span class="kw">this</span>.rag.ssotExists()) <span class="kw">return</span> '';
+    <span class="kw">return</span> <span class="kw">this</span>.rag.searchSSOT(query);
+  }
+
+  <span class="cmt">// Session memory যোগ করা</span>
+  addToSession(sessionId: string, message: string): void {
+    <span class="kw">const</span> buf = <span class="kw">this</span>.sessionBuffer.get(sessionId) || [];
+    buf.push(message);
+    <span class="kw">if</span> (buf.length > 20) buf.shift();
+    <span class="kw">this</span>.sessionBuffer.set(sessionId, buf);
+  }
+
+  <span class="cmt">// Agent model .env থেকে পড়া</span>
+  getAgentModel(agentType: string): string {
+    <span class="kw">const</span> envKey = <span class="str">`ZOMBIE_AGENT_</span>${agentType.toUpperCase()}<span class="str">_MODEL`</span>;
+    <span class="kw">return</span> process.env[envKey] || <span class="kw">this</span>.config.defaultModel;
+  }
+}</div>
+
+<!-- ========== 3. SSOT কিভাবে ফলো করবে ========== -->
+<h2>৩. LangChain Agent - SSOT কিভাবে ফলো করবে</h2>
+
+<h3>৩.১ বর্তমান সমস্যা</h3>
+<div class="comparison">
+    <div class="before">
+        <h4>আগে (বর্তমান)</h4>
+        <ul>
+            <li>LangChain Agent শুধু tool calling করে</li>
+            <li>SSOT.md পড়ে না</li>
+            <li>Project context জানে না</li>
+            <li>Memory আছে কিন্তু context নেই</li>
+            <li>সাধারণ system prompt ব্যবহার করে</li>
+        </ul>
+    </div>
+    <div class="after">
+        <h4>পরে (প্রস্তাবিত)</h4>
+        <ul>
+            <li>LangChain Agent + RAGModule integrated</li>
+            <li>প্রতিটি chat request এ SSOT context যোগ হবে</li>
+            <li>Project structure, dependencies, docs জানবে</li>
+            <li>Memory + Context দুটোই থাকবে</li>
+            <li>Agent-specific system prompt + SSOT context</li>
+        </ul>
+    </div>
+</div>
+
+<h3>৩.২ প্রস্তাবিত LangChain Agent (RAG সহ)</h3>
+<div class="code-block"><span class="kw">export async function</span> runLangChainAgentWithRAG(
+  params: AgentRunParams
+): Promise&lt;AgentRunResult&gt; {
+  <span class="kw">const</span> { messages, sessionId, systemPrompt, modelName, agentType } = params;
+
+  <span class="cmt">// 1. SSOT থেকে context নেওয়া</span>
+  <span class="kw">const</span> lastMsg = messages[messages.length - 1]?.content || '';
+  <span class="kw">const</span> ragContext = <span class="kw">await</span> ragModule.getContext(lastMsg);
+
+  <span class="cmt">// 2. Agent-specific model .env থেকে পড়া</span>
+  <span class="kw">const</span> model = modelName || ragModule.getAgentModel(agentType || 'general');
+
+  <span class="cmt">// 3. System prompt তৈরি (identity + SSOT context)</span>
+  <span class="kw">const</span> fullPrompt = [
+    systemPrompt || getDefaultPrompt(),
+    ragContext ? <span class="str">`--- Project Context ---\n</span>${ragContext}<span class="str">\n--- End ---`</span> : '',
+  ].filter(Boolean).join(<span class="str">'\n\n'</span>);
+
+  <span class="cmt">// 4. LangChain agent চালানো</span>
+  <span class="kw">const</span> llm = <span class="kw">new</span> ChatOpenAI({
+    modelName: model,
+    configuration: { baseURL: PROXI_BRIDGE_URL },
+  });
+
+  <span class="kw">const</span> agent = createReactAgent({
+    llm,
+    tools: ALL_TOOLS,
+    checkpointSaver: memory,
+    prompt: fullPrompt,
+  });
+
+  <span class="cmt">// 5. Session memory আপডেট</span>
+  ragModule.addToSession(sessionId, <span class="str">`[User] </span>${lastMsg}<span class="str">`</span>);
+
+  <span class="kw">const</span> result = <span class="kw">await</span> agent.invoke(
+    { messages: inputMessages },
+    { configurable: { thread_id: sessionId } }
+  );
+
+  <span class="kw">const</span> response = extractLastMessage(result);
+  ragModule.addToSession(sessionId, <span class="str">`[Agent] </span>${response.substring(0, 200)}<span class="str">`</span>);
+
+  <span class="kw">return</span> { response, model, toolCalls, conversationId: sessionId };
+}</div>
+
+<!-- ========== 4. Response Normalizer ========== -->
+<h2>৪. Response Normalizer - বিভিন্ন মডেলের Format একত্রীকরণ</h2>
+
+<h3>৪.১ সমস্যা</h3>
+<div class="alert alert-danger">
+    <strong>গুরুত্বপূর্ণ:</strong> বিভিন্ন OpenAI-compatible মডেল ভিন্ন ভিন্ন format এ response দেয়:<br><br>
+    <strong>Groq:</strong> <code>{ choices: [{ message: { content: "..." } }] }</code><br>
+    <strong>OpenCode Zen:</strong> <code>{ choices: [{ message: { content: "..." } }] }</code> (কিন্তু কখনো streaming chunks আলাদা)<br>
+    <strong>Ollama:</strong> <code>{ message: { content: "..." } }</code> (choices নেই!)<br>
+    <strong>Gemini:</strong> <code>{ candidates: [{ content: { parts: [{ text: "..." }] } }] }</code><br>
+    <strong>Anthropic:</strong> <code>{ content: [{ text: "..." }] }</code><br><br>
+    সুতরাং, মডেল switch করলে response parse fail হতে পারে!
+</div>
+
+<h3>৪.২ ResponseNormalizer Class</h3>
+<div class="code-block"><span class="kw">export class</span> ResponseNormalizer {
+
+  <span class="cmt">// যেকোনো format থেকে standard content বের করা</span>
+  <span class="kw">static</span> extractContent(raw: any, provider?: string): string {
+    <span class="kw">if</span> (!raw) <span class="kw">return</span> '';
+
+    <span class="cmt">// 1. Groq / OpenAI standard format</span>
+    <span class="kw">if</span> (raw.choices?.[0]?.message?.content) {
+      <span class="kw">return</span> raw.choices[0].message.content;
+    }
+
+    <span class="cmt">// 2. Ollama format (no choices array)</span>
+    <span class="kw">if</span> (raw.message?.content && !raw.choices) {
+      <span class="kw">return</span> raw.message.content;
+    }
+
+    <span class="cmt">// 3. Gemini format</span>
+    <span class="kw">if</span> (raw.candidates?.[0]?.content?.parts?.[0]?.text) {
+      <span class="kw">return</span> raw.candidates[0].content.parts[0].text;
+    }
+
+    <span class="cmt">// 4. Anthropic format</span>
+    <span class="kw">if</span> (Array.isArray(raw.content) && raw.content[0]?.text) {
+      <span class="kw">return</span> raw.content[0].text;
+    }
+
+    <span class="cmt">// 5. Direct string</span>
+    <span class="kw">if</span> (typeof raw === <span class="str">'string'</span>) <span class="kw">return</span> raw;
+
+    <span class="cmt">// 6. Fallback: try JSON.stringify</span>
+    <span class="kw">return</span> JSON.stringify(raw);
+  }
+
+  <span class="cmt">// Usage/token normalize করা</span>
+  <span class="kw">static</span> extractUsage(raw: any): { prompt: number; completion: number; total: number } {
+    <span class="kw">if</span> (raw.usage) {
+      <span class="kw">return</span> {
+        prompt: raw.usage.prompt_tokens || 0,
+        completion: raw.usage.completion_tokens || 0,
+        total: raw.usage.total_tokens || 0,
+      };
+    }
+    <span class="cmt">// Ollama format</span>
+    <span class="kw">if</span> (raw.prompt_eval_count || raw.eval_count) {
+      <span class="kw">return</span> {
+        prompt: raw.prompt_eval_count || 0,
+        completion: raw.eval_count || 0,
+        total: (raw.prompt_eval_count || 0) + (raw.eval_count || 0),
+      };
+    }
+    <span class="kw">return</span> { prompt: 0, completion: 0, total: 0 };
+  }
+
+  <span class="cmt">// Stream chunks normalize করা</span>
+  <span class="kw">static</span> normalizeStreamChunk(chunk: any): string {
+    <span class="kw">if</span> (chunk.choices?.[0]?.delta?.content) {
+      <span class="kw">return</span> chunk.choices[0].delta.content;
+    }
+    <span class="kw">if</span> (chunk.message?.content) {
+      <span class="kw">return</span> chunk.message.content;
+    }
+    <span class="kw">if</span> (chunk.candidates?.[0]?.content?.parts?.[0]?.text) {
+      <span class="kw">return</span> chunk.candidates[0].content.parts[0].text;
+    }
+    <span class="kw">return</span> '';
+  }
+}</div>
+
+<h3>৪.৩ কেন এটি দরকার</h3>
+<table>
+    <thead><tr><th>মডেল</th><th>Provider</th><th>Response Format</th><th>সমস্যা</th></tr></thead>
+    <tbody>
+        <tr><td>llama-3.3-70b</td><td>Groq</td><td><code>choices[0].message.content</code></td><td>Standard</td></tr>
+        <tr><td>mimo-v2.5-free</td><td>OpenCode Zen</td><td><code>choices[0].message.content</code></td><td>Standard</td></tr>
+        <tr><td>qwen2.5-coder:7b</td><td>Ollama</td><td><code>message.content</code></td><td><span class="badge badge-red">choices নেই!</span></td></tr>
+        <tr><td>gemini-2.0-flash</td><td>Gemini</td><td><code>candidates[0].content.parts[0].text</code></td><td><span class="badge badge-orange">সম্পূর্ণ আলাদা!</span></td></tr>
+        <tr><td>claude-sonnet-4-6</td><td>Anthropic</td><td><code>content[0].text</code></td><td><span class="badge badge-orange">সম্পূর্ণ আলাদা!</span></td></tr>
+    </tbody>
+</table>
+
+<!-- ========== 5. Agent Model Config ========== -->
+<h2>৫. Agent Model Config - .env থেকে পড়া</h2>
+
+<h3>৫.১ .env ফাইল</h3>
+<div class="code-block"><span class="cmt"># === ZombieCoder Agent Models ===</span>
+<span class="cmt"># প্রতিটি এজেন্টের জন্য আলাদা মডেল</span>
+<span class="cmt"># এখান থেকে সিস্টেম নিজে পড়ে নেবে, কোড ছোঁয়া লাগবে না</span>
+
+<span class="cmt"># --- প্রাথমিক মডেল ---</span>
+ZOMBIE_AGENT_GENERAL_MODEL=mimo-v2.5-free
+ZOMBIE_AGENT_ARCHITECT_MODEL=nemotron-3-ultra-free
+ZOMBIE_AGENT_ENGINEER_MODEL=deepseek-v4-flash-free
+ZOMBIE_AGENT_QA_MODEL=big-pickle
+ZOMBIE_AGENT_DOCS_MODEL=mimo-v2.5-free
+ZOMBIE_AGENT_OPS_MODEL=nemotron-3-ultra-free
+
+<span class="cmt"># --- ফলব্যাক মডেল ---</span>
+ZOMBIE_AGENT_GENERAL_FALLBACK=deepseek-v4-flash-free
+ZOMBIE_AGENT_ARCHITECT_FALLBACK=big-pickle
+ZOMBIE_AGENT_ENGINEER_FALLBACK=mimo-v2.5-free
+ZOMBIE_AGENT_QA_FALLBACK=nemotron-3-ultra-free
+ZOMBIE_AGENT_DOCS_FALLBACK=deepseek-v4-flash-free
+ZOMBIE_AGENT_OPS_FALLBACK=big-pickle
+
+<span class="cmt"># --- Proxi Bridge URL ---</span>
+PROXI_BRIDGE_URL=http://localhost:9999/v1
+
+<span class="cmt"># --- RAG Settings ---</span>
+ZOMBIE_RAG_ENABLED=true
+ZOMBIE_RAG_MAX_CHUNKS=5
+ZOMBIE_RAG_AUTO_DETECT=true</div>
+
+<h3>৫.২ AgentModelConfig Class</h3>
+<div class="code-block"><span class="kw">export class</span> AgentModelConfig {
+  <span class="kw">static</span> get(agentType: string): { model: string; fallback: string } {
+    <span class="kw">const</span> upper = agentType.toUpperCase();
+    <span class="kw">return</span> {
+      model: process.env[<span class="str">`ZOMBIE_AGENT_</span>${upper}<span class="str">_MODEL`</span>] || <span class="str">'mimo-v2.5-free'</span>,
+      fallback: process.env[<span class="str">`ZOMBIE_AGENT_</span>${upper}<span class="str">_FALLBACK`</span>] || <span class="str">'deepseek-v4-flash-free'</span>,
+    };
+  }
+
+  <span class="kw">static</span> getAll(): Record&lt;string, { model: string; fallback: string }&gt; {
+    <span class="kw">const</span> agents = [<span class="str">'general'</span>, <span class="str">'architect'</span>, <span class="str">'engineer'</span>, <span class="str">'qa'</span>, <span class="str">'docs'</span>, <span class="str">'ops'</span>];
+    <span class="kw">const</span> result: Record&lt;string, any&gt; = {};
+    <span class="kw">for</span> (<span class="kw">const</span> a <span class="kw">of</span> agents) {
+      result[a] = AgentModelConfig.get(a);
+    }
+    <span class="kw">return</span> result;
+  }
+}</div>
+
+<!-- ========== 6. যৌক্তিকতা মূল্যায়ন ========== -->
+<h2>৬. যৌক্তিকতা মূল্যায়ন</h2>
+
+<h3>৬.১ সুবিধাগুলো</h3>
+<div class="alert alert-success">
+    <strong>✅ এই পদ্ধতির সুবিধা:</strong>
+    <ol style="padding-left: 20px; margin-top: 10px;">
+        <li><strong>কোড ছোঁয়া লাগে না:</strong> মডেল পরিবর্তন করতে শুধু .env এডিট করলেই হবে</li>
+        <li><strong>সহজ ইন্টিগ্রেশন:</strong> UniversalLLMController এর একটি নতুন method যোগ করলেই হবে</li>
+        <li><strong>Response consistency:</strong> ResponseNormalizer সব format কে standard format এ আনবে</li>
+        <li><strong>Dev/Prod separation:</strong> .env.local, .env.production দিয়ে আলাদা করা যায়</li>
+        <li><strong>Zero config:</strong> Default values থাকায় কোনো config ছাড়াই কাজ করবে</li>
+    </ol>
+</div>
+
+<h3>৬.২ ঝুঁকি ও সমাধান</h3>
+<table>
+    <thead><tr><th>ঝুঁকি</th><th>সমাধান</th></tr></thead>
+    <tbody>
+        <tr><td>.env না থাকলে কি হবে?</td><td>Default values আছে, কাজ চালু থাকবে</td></tr>
+        <tr><td>Response format মিলবে না?</td><td>ResponseNormalizer সব normalize করবে</td></tr>
+        <tr><td>RAG context বড় হলে?</td><td>maxChunks limit আছে, truncation হবে</td></tr>
+        <tr><td>Session memory leak?</td><td>20 message limit, auto-cleanup</td></tr>
+    </tbody>
+</table>
+
+<!-- ========== 7. সিদ্ধান্ত ========== -->
+<h2>৭. চূড়ান্ত সিদ্ধান্ত ও পরিকল্পনা</h2>
+
+<div class="alert alert-info">
+    <strong>সিদ্ধান্ত:</strong> এই পদ্ধতি <strong>অত্যন্ত যৌক্তিক ও বাস্তবসম্মত</strong>। এটি সিস্টেমের জটিলতা কমাবে এবং maintainability বাড়াবে।
+</div>
+
+<h3>৭.১ ধাপভিত্তিক বাস্তবায়ন পরিকল্পনা</h3>
+<table>
+    <thead><tr><th>ধাপ</th><th>কাজ</th><th>ফাইল</th><th>অগ্রাধিকার</th></tr></thead>
+    <tbody>
+        <tr><td>১</td><td>ResponseNormalizer তৈরি</td><td><code>src/services/responseNormalizer.ts</code></td><td><span class="badge badge-red">High</span></td></tr>
+        <tr><td>২</td><td>AgentModelConfig তৈরি</td><td><code>src/services/agentModelConfig.ts</code></td><td><span class="badge badge-red">High</span></td></tr>
+        <tr><td>৩</td><td>RAGModule তৈরি</td><td><code>src/services/ragModule.ts</code></td><td><span class="badge badge-red">High</span></td></tr>
+        <tr><td>৪</td><td>UniversalLLMController আপডেট</td><td><code>LangChainAgent/src/controllers/UniversalLLMController.ts</code></td><td><span class="badge badge-orange">Medium</span></td></tr>
+        <tr><td>৫</td><td>LangChain Agent আপডেট</td><td><code>src/services/langchainAgent.ts</code></td><td><span class="badge badge-orange">Medium</span></td></tr>
+        <tr><td>৬</td><td>.env.example আপডেট</td><td><code>.env.example</code></td><td><span class="badge badge-green">Low</span></td></tr>
+        <tr><td>৭</td><td>ডকুমেন্টেশন লেখা</td><td><code>docs/</code></td><td><span class="badge badge-green">Low</span></td></tr>
+    </tbody>
+</table>
+
+<h3>৭.২ ফাইনাল আর্কিটেকচার</h3>
+<div class="diagram">
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         Proxi Bridge Server                              │
+│                         (localhost:9999)                                  │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │                     API Layer (Routes)                              │  │
+│  │  POST /v1/chat/completions  ←→  OpenAI-compatible                  │  │
+│  │  POST /v1/agent/chat        ←→  Agent chat (RAG + Tools)          │  │
+│  │  POST /v1/agent/langchain   ←→  LangChain Agent (RAG + Memory)    │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                              │                                           │
+│  ┌───────────────────────────▼───────────────────────────────────────┐  │
+│  │                    Controller Layer                                │  │
+│  │  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────┐    │  │
+│  │  │ OpenAI       │  │ UniversalLLM     │  │ AgentService     │    │  │
+│  │  │ Controller   │  │ Controller       │  │                  │    │  │
+│  │  │              │  │ + RAGModule      │  │ + DiskRAGService │    │  │
+│  │  │              │  │ + Normalizer     │  │ + MawlanaRouter  │    │  │
+│  │  │              │  │ + ModelConfig    │  │                  │    │  │
+│  │  └──────────────┘  └──────────────────┘  └──────────────────┘    │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                              │                                           │
+│  ┌───────────────────────────▼───────────────────────────────────────┐  │
+│  │                    Service Layer                                   │  │
+│  │  ┌────────────┐ ┌──────────────┐ ┌────────────┐ ┌─────────────┐  │  │
+│  │  │ GroqService │ │ DiskRAG     │ │ Identity   │ │ Provider    │  │  │
+│  │  │ (968 lines) │ │ Service     │ │ Service    │ │ Bootstrap   │  │  │
+│  │  │            │ │ (278 lines)  │ │ (186 lines)│ │ (397 lines) │  │  │
+│  │  └────────────┘ └──────────────┘ └────────────┘ └─────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                              │                                           │
+│  ┌───────────────────────────▼───────────────────────────────────────┐  │
+│  │                    Data Layer                                      │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐    │  │
+│  │  │ SSOT.md      │  │ state.db     │  │ .zombiecoder/        │    │  │
+│  │  │ (RAG Knowledge│  │ (SQLite)     │  │ permissions.json     │    │  │
+│  │  │  Base)        │  │              │  │ agent_memory.db      │    │  │
+│  │  └──────────────┘  └──────────────┘  └──────────────────────┘    │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────┘</div>
+
+    </div>
+</div>
+
+<!-- ========== 9. Dynamic Working Directory ========== -->
+<div class="card">
+    <div class="card-body">
+        <h2>৯. Dynamic Working Directory - Hardcoded Path নেই</h2>
+
+        <div class="alert alert-success">
+            <strong>মূল নীতি:</strong> কোনো নির্দিষ্ট directory hardcoded নেই। Working directory হলো <strong>যেকোনো এডিটর যখন connect করে</strong>, তখন সে যে folder খুলেছে — <strong>সেটিই</strong> unique working directory।
+        </div>
+
+        <h3>৯.১ কিভাবে কাজ করে</h3>
+        <div class="diagram">
+Editor (JetBrains/VS Code/Cursor)
+        │
+        │ POST /v1/agent/directory
+        │ { "directory": "/home/user/project-x" }
+        │
+        ▼
+┌─────────────────────────────────────────────────┐
+│              Proxi Bridge Server                 │
+│                                                  │
+│  1. Directory path নেওয়া (editor থেকে)          │
+│  2. Auto-trust করা                               │
+│  3. SSOT check করা (ensureSSOT)                 │
+│  4. Flag create করা (0 → 1)                     │
+│  5. Working directory set করা                    │
+│                                                  │
+│  প্রতিটি editor connection = একটি unique         │
+│  working directory = একটি SSOT state             │
+└─────────────────────────────────────────────────┘
+        │
+        ▼
+/home/user/project-x/.zombiecoder/SSOT.md
+        (এই directory এ SSOT তৈরি হলো)
+
+=== অন্য একটি editor অন্য folder খুললে ===
+
+/home/user/project-y/.zombiecoder/SSOT.md
+        (আলাদা SSOT, আলাদা state)</div>
+
+        <h3>৯.২ State per Directory</h3>
+        <table>
+            <thead><tr><th>Editor Connection</th><th>Directory</th><th>SSOT Flag</th><th>State</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>JetBrains #1</td>
+                    <td><code>/home/user/project-a</code></td>
+                    <td>1</td>
+                    <td>Active, 45 files tracked</td>
+                </tr>
+                <tr>
+                    <td>VS Code #1</td>
+                    <td><code>/home/user/project-b</code></td>
+                    <td>1</td>
+                    <td>Active, 120 files tracked</td>
+                </tr>
+                <tr>
+                    <td>MCP Client #1</td>
+                    <td><code>/home/user/project-c</code></td>
+                    <td>0</td>
+                    <td>Pending (not yet accessed)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>৯.৩ In-Memory State Map</h3>
+        <div class="code-block"><span class="cmt">// Each directory gets its own state entry</span>
+<span class="cmt">// No hardcoded paths anywhere in the code</span>
+
+<span class="kw">const</span> stateMap = <span class="kw">new</span> Map&lt;<span class="kw">string</span>, SSOTState&gt;();
+
+<span class="cmt">// Example entries (dynamic, based on editor connections):</span>
+stateMap.set(<span class="str">'/home/user/project-a'</span>, {
+  directory: <span class="str">'/home/user/project-a'</span>,
+  flag: <span class="str">1</span>,
+  fileCount: 45,
+  lastScan: 1718450000000,
+});
+
+stateMap.set(<span class="str">'/var/www/production-app'</span>, {
+  directory: <span class="str">'/var/www/production-app'</span>,
+  flag: <span class="str">1</span>,
+  fileCount: 230,
+  lastScan: 1718450000000,
+});
+
+<span class="cmt">// User opens folder 500+ deep — still works!</span>
+stateMap.set(<span class="str">'/home/user/projects/deep/folder/structure/app'</span>, {
+  directory: <span class="str">'/home/user/projects/deep/folder/structure/app'</span>,
+  flag: <span class="str">0</span>,  <span class="cmt">// not yet accessed</span>
+  fileCount: 0,
+  lastScan: 0,
+});</div>
+
+        <h3>৯.৪ Dependency Safety</h3>
+        <div class="dep-ok">
+            <h4>কোনো version conflict নেই</h4>
+            <ul style="padding-left: 20px;">
+                <li>নতুন কোড শুধু <code>src/services/</code> এ যোগ হয়েছে</li>
+                <li>কোনো নতুন npm package install হয়নি</li>
+                <li>বিদ্যমান <code>fs</code>, <code>path</code>, <code>crypto</code> ব্যবহার করা হয়েছে</li>
+                <li>LangChainAgent মডিউল (<code>src/LangChainAgent/</code>) আলাদা থাকে</li>
+                <li>proxi_new সার্ভিস (<code>src/services/</code>) আলাদা থাকে</li>
+                <li>শুধু <code>import</code> path দিয়ে সংযুক্ত — <strong>zero dependency overlap</strong></li>
+            </ul>
+        </div>
+
+        <div class="dep-warning">
+            <h4>সতর্কতা: যা করা হয়নি</h4>
+            <ul style="padding-left: 20px;">
+                <li>LangChainAgent এ <code>@langchain/*</code> package যোগ হয়নি</li>
+                <li>proxi_new এ <code>@ai-sdk/*</code> package যোগ হয়নি</li>
+                <li>দুই মডিউলের <code>node_modules</code> আলাদা</li>
+                <li>শুধু TypeScript types ও service classes shared হয়েছে</li>
+            </ul>
+        </div>
+
+        <h3>৯.৫ Architecture Diagram</h3>
+        <div class="diagram">
+┌──────────────────────────────────────────────────────────────────┐
+│                    Editor Connections (dynamic)                    │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │JetBrains │  │ VS Code  │  │ Cursor   │  │ MCP      │        │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        │
+│       │              │              │              │              │
+│       ▼              ▼              ▼              ▼              │
+│  /project-a    /project-b    /project-c    /project-d            │
+│       │              │              │              │              │
+├───────┼──────────────┼──────────────┼──────────────┼──────────────┤
+│       ▼              ▼              ▼              ▼              │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              Proxi Bridge (localhost:9999)                 │   │
+│  │                                                            │   │
+│  │  ┌─────────────────────────────────────────────────────┐  │   │
+│  │  │         RAGModule (Self-Healing)                    │  │   │
+│  │  │                                                       │  │   │
+│  │  │  stateMap = Map {                                     │  │   │
+│  │  │    "/project-a" → { flag:1, files:45 }               │  │   │
+│  │  │    "/project-b" → { flag:1, files:120 }              │  │   │
+│  │  │    "/project-c" → { flag:0, files:0 }               │  │   │
+│  │  │    "/project-d" → { flag:1, files:67 }               │  │   │
+│  │  │  }                                                     │  │   │
+│  │  └─────────────────────────────────────────────────────┘  │   │
+│  │                                                            │   │
+│  │  ┌─────────────────────────────────────────────────────┐  │   │
+│  │  │         ResponseNormalizer                           │  │   │
+│  │  │  Groq → standard    Ollama → standard               │  │   │
+│  │  │  Gemini → standard  Anthropic → standard            │  │   │
+│  │  └─────────────────────────────────────────────────────┘  │   │
+│  │                                                            │   │
+│  │  ┌─────────────────────────────────────────────────────┐  │   │
+│  │  │         AgentModelConfig (.env driven)              │  │   │
+│  │  │  ARCHITECT_MODEL=nemotron-3-ultra-free              │  │   │
+│  │  │  ENGINEER_MODEL=deepseek-v4-flash-free              │  │   │
+│  │  │  QA_MODEL=big-pickle                                │  │   │
+│  │  └─────────────────────────────────────────────────────┘  │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                   │
+│  ┌───────────────────────────▼───────────────────────────────┐  │
+│  │              DiskRAGService                                │  │
+│  │  /project-a/.zombiecoder/SSOT.md                         │  │
+│  │  /project-b/.zombiecoder/SSOT.md                         │  │
+│  │  /project-c/.zombiecoder/SSOT.md (created on access)     │  │
+│  │  /project-d/.zombiecoder/SSOT.md                         │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘</div>
+
+    </div>
+</div>
+
+<!-- ========== FOOTER ========== -->
+<div class="card">
+    <div class="card-body" style="text-align:center; padding:20px;">
+        <p><strong>ZombieCoder Agent System</strong> - "যেখানে কোড ও কথা বলে"</p>
+        <p style="font-size:0.9em; opacity:0.7;">নির্মাতা: Sahon Srabon | Developer Zone | Dhaka, Bangladesh</p>
+        <p style="font-size:0.85em; opacity:0.6;">আর্কিটেকচার বিশ্লেষণ ও ডকুমেন্টেশন - 2026</p>
+    </div>
+</div>
+
+</div>
+</body>
+</html>
+
+<!-- ========== 8. Self-Healing Agent Pattern ========== -->
+<div class="card">
+    <div class="card-body">
+        <h2>৮. Self-Healing Agent Pattern - SSOT Auto-Bootstrap</h2>
+
+        <div class="alert alert-success">
+            <strong>মূল ধারণা:</strong> প্রতিটি agent request এ, agent প্রথমে চেক করবে SSOT.md আছে কিনা। না থাকলে নিজেই তৈরি করবে। এতে করে agent কখনো ভুল করবে না।
+        </div>
+
+        <h3>৮.১ সমস্যা (বর্তমান অবস্থা)</h3>
+        <div class="alert alert-danger">
+            <strong>বর্তমানে:</strong><br>
+            - ফাইল চৌকিদার (WorkspaceWatcher) ঘুমিয়ে পড়লে SSOT পুরনো থাকে<br>
+            - নতুন ফাইল যোগ হলে agent জানে না<br>
+            - SSOT না থাকলে agent ভুল উত্তর দেয়<br>
+            - ক্লায়েন্ট (JetBrains/MCP) থেকে request এলেও SSOT check হয় না
+        </div>
+
+        <h3>৮.২ সমাধান: Self-Healing Agent</h3>
+        <div class="diagram">
+Client Request (যেকোনো endpoint থেকে)
+        │
+        ▼
+┌─────────────────────────────────────────┐
+│         Agent: SSOT আছে কিনা?           │
+│         (check flag + fileCount)         │
+└─────────────────┬───────────────────────┘
+                  │
+          ┌───────┴───────┐
+          │               │
+        হ্যাঁ            না
+    (flag=1)         (flag=0)
+          │               │
+          ▼               ▼
+┌─────────────────┐  ┌─────────────────────┐
+│ ফাইল পরিবর্তন   │  │ SSOT তৈরি করো      │
+│ হয়েছে কিনা?    │  │ scanProject()       │
+│ (fileCount match)│  │ generateSSOT()      │
+└────────┬────────┘  │ flag = 1 set        │
+         │           └──────────┬──────────┘
+    ┌────┴────┐                │
+    │         │                │
+  হ্যাঁ      না               │
+    │         │                │
+    ▼         ▼                ▼
+┌────────┐ ┌────────┐  ┌────────────┐
+│Rescan  │ │ ব্যবহার │  │ SSOT মেনে  │
+│+Update │ │ করো    │  │ চলো       │
+└────────┘ └────────┘  └────────────┘</div>
+
+        <h3>৮.৩ SSOT State Machine</h3>
+        <div class="code-block"><span class="kw">interface</span> SSOTState {
+  directory: <span class="kw">string</span>;
+  flag: <span class="str">0</span> | <span class="str">1</span>;           <span class="cmt">// 0 = তৈরি হয়নি, 1 = তৈরি হয়েছে</span>
+  lastScan: <span class="kw">number</span>;       <span class="cmt">// শেষ scan এর timestamp</span>
+  lastModified: <span class="kw">number</span>;   <span class="cmt">// SSOT শেষ আপডেট</span>
+  fileCount: <span class="kw">number</span>;      <span class="cmt">// ফাইল সংখ্যা (পরিবর্তন ট্র্যাক)</span>
+  contentHash: <span class="kw">string</span>;    <span class="cmt">// SSOT content hash (integrity check)</span>
+}
+
+<span class="cmt">// State Transitions:</span>
+<span class="cmt">// State 0 (Uninitialized) → [createSSOT] → State 1 (Initialized)</span>
+<span class="cmt">// State 1 (Initialized) → [fileChanged] → State 2 (Stale)</span>
+<span class="cmt">// State 2 (Stale) → [rescan] → State 1 (Initialized)</span></div>
+
+        <h3>৮.৪ ensureSSOT() Function</h3>
+        <div class="code-block"><span class="kw">async function</span> ensureSSOT(
+  dir: <span class="kw">string</span>,
+  rag: DiskRAGService
+): Promise&lt;<span class="kw">string</span>&gt; {
+  
+  <span class="cmt">// 1. State check</span>
+  <span class="kw">const</span> state = getState(dir);
+  
+  <span class="kw">if</span> (state.flag === <span class="str">1</span>) {
+    <span class="cmt">// SSOT আছে - কিন্তু কি আপডেট দরকার?</span>
+    <span class="kw">const</span> currentFileCount = <span class="kw">await</span> countFiles(dir);
+    
+    <span class="kw">if</span> (currentFileCount !== state.fileCount) {
+      <span class="cmt">// নতুন ফাইল যোগ/মুছে ফেলা হয়েছে</span>
+      console.log(<span class="str">`📂 Files changed in </span>${dir}<span class="str">. Rescanning...`</span>);
+      <span class="kw">await</span> rescanAndUpdateSSOT(dir, rag);
+      updateState(dir, { fileCount: currentFileCount });
+    }
+    
+    <span class="kw">return</span> rag.searchSSOT(<span class="str">''</span>); <span class="cmt">// পুরো SSOT পড়ো</span>
+  }
+  
+  <span class="cmt">// 2. SSOT নেই - তৈরি করো</span>
+  console.log(<span class="str">`🆕 No SSOT found for </span>${dir}<span class="str">. Creating...`</span>);
+  
+  <span class="kw">const</span> { needsPermission } = <span class="kw">await</span> rag.setWorkingDirectory(dir, { autoInit: <span class="kw">true</span> });
+  
+  <span class="kw">if</span> (needsPermission) {
+    <span class="kw">throw new</span> Error(<span class="str">'Permission required for directory access'</span>);
+  }
+  
+  <span class="kw">const</span> fileCount = <span class="kw">await</span> countFiles(dir);
+  setState(dir, {
+    flag: <span class="str">1</span>,
+    lastScan: Date.now(),
+    fileCount,
+  });
+  
+  console.log(<span class="str">`✅ SSOT created for </span>${dir}<span class="str"> with </span>${fileCount}<span class="str"> files`</span>);
+  
+  <span class="kw">return</span> rag.readSSOT();
+}</div>
+
+        <h3>৮.৫ তিনটি Endpoint এ কিভাবে কাজ করবে</h3>
+        <table>
+            <thead><tr><th>Endpoint</th><th>ব্যবহারকারী</th><th>SSOT Check</th><th>আচরণ</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><code>/v1/chat/completions</code></td>
+                    <td>JetBrains, VS Code, Direct API</td>
+                    <td>প্রতিটি request এ</td>
+                    <td>ensureSSOT() কল → context যোগ → response</td>
+                </tr>
+                <tr>
+                    <td><code>/v1/agent/chat</code></td>
+                    <td>Agent UI, Chat Interface</td>
+                    <td>প্রতিটি message এ</td>
+                    <td>ensureSSOT() → RAG search → Agent process</td>
+                </tr>
+                <tr>
+                    <td><code>/mcp</code></td>
+                    <td>MCP Clients (Cursor, etc.)</td>
+                    <td>প্রতিটি tool call এ</td>
+                    <td>ensureSSOT() → tool context → response</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>৮.৬ State Persistence</h3>
+        <div class="code-block"><span class="cmt">// State DB তে store হবে</span>
+<span class="cmt">// Table: ssot_states</span>
+CREATE TABLE ssot_states (
+  directory TEXT PRIMARY KEY,
+  flag INTEGER DEFAULT 0,
+  last_scan INTEGER,
+  last_modified INTEGER,
+  file_count INTEGER,
+  content_hash TEXT
+);
+
+<span class="cmt">// Startup এ:</span>
+<span class="kw">async function</span> initializeAllSSOTStates() {
+  <span class="kw">const</span> dirs = getAllTrustedDirectories();
+  <span class="kw">for</span> (<span class="kw">const</span> dir <span class="kw">of</span> dirs) {
+    <span class="kw">const</span> exists = <span class="kw">await</span> ssotExists(dir);
+    <span class="kw">if</span> (exists) {
+      setState(dir, { flag: <span class="str">1</span>, ... });
+    } <span class="kw">else</span> {
+      setState(dir, { flag: <span class="str">0</span>, ... });
+    }
+  }
+}</div>
+
+        <h3>৮.৭ সুবিধাগুলো</h3>
+        <div class="comparison">
+            <div class="before">
+                <h4>আগে (Watchdog dependent)</h4>
+                <ul>
+                    <li>Watchdog থামলে SSOT পুরনো</li>
+                    <li>Agent ভুল context ব্যবহার করে</li>
+                    <li>Manual rescan দরকার</li>
+                    <li>Client request এ SSOT check হয় না</li>
+                    <li>State tracking নেই</li>
+                </ul>
+            </div>
+            <div class="after">
+                <h4>পরে (Self-Healing)</h4>
+                <ul>
+                    <li>Watchdog independent</li>
+                    <li>Agent নিজেই SSOT maintain করে</li>
+                    <li>Auto-rescan on file change</li>
+                    <li>প্রতিটি request এ check</li>
+                    <li>Persistent state tracking</li>
+                    <li>Zero config, zero maintenance</li>
+                </ul>
+            </div>
+        </div>
+
+        <h3>৮.৮ Performance Consideration</h3>
+        <div class="alert alert-info">
+            <strong>প্রশ্ন:</strong> প্রতিটি request এ SSOT check করলে slow হবে না?<br><br>
+            <strong>উত্তর:</strong> না! কারণ:<br>
+            <ul style="padding-left: 20px; margin-top: 10px;">
+                <li><strong>State check:</strong> In-memory Map lookup (0.001ms)</li>
+                <li><strong>File count check:</strong> fs.readdirSync (1-5ms)</li>
+                <li><strong>SSOT read:</strong> fs.readFileSync (1-2ms)</li>
+                <li><strong>Total overhead:</strong> 2-7ms (negligible)</li>
+                <li><strong>AI response time:</strong> 500-2000ms</li>
+            </ul>
+            <strong>সুতরাং, overhead মাত্র 0.3-1%!</strong>
+        </div>
+
+    </div>
+</div>

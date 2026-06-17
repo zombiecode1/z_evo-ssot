@@ -1,0 +1,45 @@
+{
+  "name": "zombiecoder-agent",
+  "version": "1.1.0",
+  "description": "ZombieCoder Agentic Module - A plug-and-play AI agent package with multi-agent support and OpenCode Zen integration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "langchain",
+    "opencode",
+    "zombiecoder"
+  ],
+  "author": "Sahon Srabon <infi@smartearningplatformbd.net>",
+  "license": "Proprietary - Local Freedom Protocol",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zombiecoder/langchain-agent.git"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^2.0.0",
+    "ai": "^6.0.205",
+    "better-sqlite3": "^12.10.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.61.0",
+    "@typescript-eslint/parser": "^8.61.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

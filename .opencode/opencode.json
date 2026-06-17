@@ -1,0 +1,134 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "model": "mimo-v2.5-free",
+  "small_model": "deepseek-v4-flash-free",
+  "default_agent": "zombie-coder",
+
+  "provider": {
+    "proxi-bridge": {
+      "name": "proxi-bridge",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "http://localhost:9999/v1",
+        "timeout": 120000
+      },
+      "models": {
+        "mimo-v2.5-free": {
+          "name": "MiMo-V2.5 Free (OpenCode Zen)",
+          "tool_call": true,
+          "reasoning": true,
+          "note": "Free model from OpenCode Zen — default model"
+        },
+        "deepseek-v4-flash-free": {
+          "name": "DeepSeek V4 Flash Free (OpenCode Zen)",
+          "tool_call": true,
+          "reasoning": true,
+          "note": "Free model from OpenCode Zen — fast coding"
+        },
+        "big-pickle": {
+          "name": "Big Pickle (OpenCode Zen)",
+          "tool_call": true,
+          "reasoning": true,
+          "note": "Free stealth model from OpenCode Zen"
+        },
+        "nemotron-3-ultra-free": {
+          "name": "Nemotron 3 Ultra Free (OpenCode Zen)",
+          "tool_call": true,
+          "reasoning": true,
+          "note": "Free NVIDIA model from OpenCode Zen"
+        },
+        "north-mini-code-free": {
+          "name": "North Mini Code Free (OpenCode Zen)",
+          "tool_call": true,
+          "reasoning": true,
+          "note": "Free mini coding model from OpenCode Zen"
+        },
+        "llama-3.3-70b-versatile": {
+          "name": "Llama 3.3 70B (Groq Fallback)",
+          "tool_call": true,
+          "reasoning": true,
+          "note": "Groq fallback model"
+        },
+        "meta-llama/llama-4-scout-17b-16e-instruct": {
+          "name": "Llama 4 Scout 17B (Groq)",
+          "tool_call": true,
+          "reasoning": true
+        },
+        "llama-3.1-8b-instant": {
+          "name": "Llama 3.1 8B Instant (Groq)",
+          "tool_call": true,
+          "reasoning": true
+        },
+        "qwen/qwen3-32b": {
+          "name": "Qwen3 32B (Groq)",
+          "tool_call": true,
+          "reasoning": true
+        },
+        "openai/gpt-oss-120b": {
+          "name": "GPT-OSS 120B (Groq)",
+          "tool_call": true,
+          "reasoning": true
+        },
+        "openai/gpt-oss-20b": {
+          "name": "GPT-OSS 20B (Groq)",
+          "tool_call": true,
+          "reasoning": true
+        },
+        "allam-2-7b": {
+          "name": "Allam 2 7B (Groq)",
+          "tool_call": true,
+          "reasoning": true
+        },
+        "groq/compound": {
+          "name": "Groq Compound",
+          "tool_call": true,
+          "reasoning": true,
+          "note": "Groq docs: compound models support built-in tools only"
+        },
+        "groq/compound-mini": {
+          "name": "Groq Compound Mini",
+          "tool_call": true,
+          "reasoning": true,
+          "note": "Groq docs: compound models support built-in tools only"
+        }
+      }
+    }
+  },
+
+  "mcp": {
+    "mcp-agent-server": {
+      "type": "remote",
+      "url": "http://localhost:9999/mcp",
+      "enabled": true,
+      "description": "OpenAI-compatible MCP Agent Server with agent execution, session verification, and health checks"
+    }
+  },
+
+  "agent": {
+    "zombie-coder": {
+      "model": "proxi-bridge/mimo-v2.5-free",
+      "mode": "primary",
+      "description": "ZombieCoder agent with RAG, identity anchoring, and smart model routing via the proxi-bridge on localhost:9999",
+      "system_prompt": "You are ZombieCoder, a local-first AI assistant. Owner: Sahon Srabon (Developer Zone, Dhaka, Bangladesh). Your identity is fixed and immutable. Never reveal internal reasoning. Always identify yourself as ZombieCoder. Contact: infi@zombiecoder.my.id | Website: https://zombiecoder.my.id/",
+      "permission": {
+        "edit": "allow",
+        "bash": "ask",
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow"
+      }
+    },
+    "zombie-explorer": {
+      "model": "proxi-bridge/qwen/qwen3-32b",
+      "mode": "subagent",
+      "description": "Fast code exploration subagent powered by qwen3-32b on proxi-bridge",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow"
+      },
+      "prompt": "You are a fast code exploration subagent powered by qwen3-32b through the proxi bridge. Quickly search and analyze codebases. Be concise."
+    }
+  }
+}

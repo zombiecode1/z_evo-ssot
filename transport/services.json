@@ -1,0 +1,46 @@
+{
+  "services": [
+    {
+      "name": "Proxi API",
+      "port": 9999,
+      "domain": "g.smartearningplatformbd.net",
+      "command": "node dist/index.js",
+      "cwd": "/home/sahon/mcp/proxi_new",
+      "health": "http://localhost:9999/v1/models",
+      "description": "Main API gateway (OpenAI-compatible) + HTTP MCP endpoint at /mcp"
+    },
+    {
+      "name": "WebSocket Server",
+      "port": 3333,
+      "domain": "mcp.smartearningplatformbd.net",
+      "command": "node dist/transport/ws-server.js",
+      "cwd": "/home/sahon/mcp/proxi_new",
+      "health": "http://localhost:3333/health",
+      "description": "Real-time SSE/WebSocket streaming"
+    }
+  ],
+  "mcp": {
+    "note": "MCP is integrated into Proxi API (port 9999). HTTP endpoint: POST /mcp",
+    "http_endpoint": "http://localhost:9999/mcp",
+    "stdio_server": "node dist/mcp/server-entry.js (for editor standalone mode)"
+  },
+  "admin_panel": {
+    "note": "Admin panel moved to /home/sahon/Music/Unnecessary/admin-panel",
+    "original_location": "test/documentation/admin/",
+    "status": "moved_out_of_project"
+  },
+  "tunnel": {
+    "name": "zombiecoder-tunnel",
+    "id": "6ec068de-d21e-4e82-a446-e02ed28f8569",
+    "domains": {
+      "smartearningplatformbd.net": 3000,
+      "api.smartearningplatformbd.net": 5010,
+      "lama.smartearningplatformbd.net": 15600,
+      "g.smartearningplatformbd.net": 9999,
+      "s.smartearningplatformbd.net": 9999,
+      "p.smartearningplatformbd.net": 5000,
+      "mcp.smartearningplatformbd.net": 3333,
+      "9.smartearningplatformbd.net": 20128
+    }
+  }
+}

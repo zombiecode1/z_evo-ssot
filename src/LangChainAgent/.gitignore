@@ -1,0 +1,35 @@
+# ─── Dependencies ─────────────────────────────────────────
+node_modules/
+
+# ─── Build Output ─────────────────────────────────────────
+dist/
+*.tsbuildinfo
+
+# ─── Environment & Secrets ────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Database Files ───────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+agent_memory.db
+
+# ─── Logs ─────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ─── IDE & Editor ─────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*~
+
+# ─── OS Files ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Temp & Cache ─────────────────────────────────────────
+tmp/
+.cache/
