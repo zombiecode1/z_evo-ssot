@@ -236,8 +236,8 @@ if (!GROQ_API_KEY) {
 // CORS: reflect origin for credentials mode (wildcard + credentials = broken)
 const ALLOWED_HOSTS = new Set([
   'localhost', '127.0.0.1', '0.0.0.0',
-  'smartearningplatformbd.net', 'api.smartearningplatformbd.net',
-  'o.smartearningplatformbd.net', 'vs.smartearningplatformbd.net',
+  'g.zombiecoder.my.id', 'g.zombiecoder.my.id',
+  'g.zombiecoder.my.id', 'g.zombiecoder.my.id',
 ]);
 app.use(cors({
   origin: (origin, callback) => {
@@ -408,7 +408,7 @@ async function start() {
       lines.push(
         '  🌐 Cloudflare Tunnel Routes:',
         `  📡 ${process.env.TUNNEL_OCODE_URL || 'https://o.smartearningplatformbd.net'} → localhost:${PORT} (Bridge)`,
-        `  📡 ${process.env.TUNNEL_API_URL || 'https://api.smartearningplatformbd.net'} → localhost:5001 (API)`,
+        `  📡 ${process.env.TUNNEL_API_URL || 'https://g.zombiecoder.my.id'} → localhost:5001 (API)`,
         `  📡 ${process.env.TUNNEL_VSCODE_URL || 'https://vs.smartearningplatformbd.net'} → localhost:5050 (VS Code)`,
         '',
       );

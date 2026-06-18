@@ -1,24 +1,28 @@
 {
   "_comment": "VS Code MCP Configuration for ZombieCoder",
-  "_usage_http": "Requires running server: node dist/index.js (port 9999)",
-  "_usage_stdio": "Spawns MCP server as child process (no server needed)",
-  
-  "mcp": {
-    "servers": {
-      "zombiecoder-http": {
-        "type": "http",
-        "url": "http://localhost:9999/mcp",
-        "_description": "Connect to running ZombieCoder server"
+  "_usage_local": "Place in .vscode/mcp.json at your project root OR use MCP: Open User Configuration from Command Palette",
+  "_usage_remote": "When using the cloud bridge at g.zombiecoder.my.id",
+  "_feature_ssot": "Auto-creates .zombiecoder/SSOT.md on connect via MCP initialize — no manual setup needed",
+  "_note_vscode_format": "Official VS Code MCP config uses root key 'servers' (NOT 'mcpServers'). HTTP type uses 'type' + 'url'. Stdio uses 'command' + 'args'. See: https://code.visualstudio.com/docs/copilot/reference/mcp-configuration",
+
+  "servers": {
+    "zombiecoder-remote": {
+      "type": "http",
+      "url": "https://g.zombiecoder.my.id/mcp",
+      "_description": "Connect to ZombieCoder cloud bridge — SSOT auto-initialized, per-session RAG isolated"
+    },
+    "zombiecoder-local": {
+      "type": "http",
+      "url": "http://localhost:9999/mcp",
+      "_description": "Connect to local ZombieCoder bridge (requires: npm start)"
+    },
+    "zombiecoder-stdio": {
+      "command": "node",
+      "args": ["dist/mcp/server-entry.js"],
+      "env": {
+        "WORKSPACE_DIR": "${workspaceFolder}"
       },
-      "zombiecoder-stdio": {
-        "command": "node",
-        "args": ["dist/mcp/server-entry.js"],
-        "cwd": "${workspaceFolder}",
-        "env": {
-          "WORKSPACE_DIR": "${workspaceFolder}"
-        },
-        "_description": "Spawn MCP server directly (standalone)"
-      }
+      "_description": "Spawn MCP server directly from source (standalone mode)"
     }
   }
 }

@@ -97,11 +97,17 @@
   },
 
   "mcp": {
-    "mcp-agent-server": {
+    "zombie-remote": {
+      "type": "remote",
+      "url": "https://g.zombiecoder.my.id/mcp",
+      "enabled": true,
+      "description": "ZombieCoder cloud bridge — SSOT auto-initialized, RAG, full agent tools"
+    },
+    "zombie-local": {
       "type": "remote",
       "url": "http://localhost:9999/mcp",
       "enabled": true,
-      "description": "OpenAI-compatible MCP Agent Server with agent execution, session verification, and health checks"
+      "description": "Local ZombieCoder bridge — auto-SSOT, agent execution, session verification"
     }
   },
 

@@ -10,9 +10,11 @@ import {
   getStateDb,
   getVectorIndexService,
 } from './agentController';
+import { DiskRAGService } from '../services/ragService';
 import { ensureConversation } from '../services/stateDb';
 import { readRuntimeEvents, recordRuntimeEvent } from '../services/runtimeEventLog';
 import { registerClient, touchClient, disconnectClient } from '../services/clientTracker';
+import { broadcastAgentEvent } from '../services/eventBroadcaster';
 
 type JsonRpcRequest = {
   jsonrpc?: string;
@@ -37,6 +39,15 @@ type McpSessionRecord = {
 
 const MCP_PROTOCOL_VERSION = '2025-03-26';
 const mcpSessions = new Map<string, McpSessionRecord>();
+
+// Per-session RAG isolation: each MCP session gets its own DiskRAGService instance
+// so that 500+ folders each have independent workspace context without clobbering.
+const mcpRagInstances = new Map<string, DiskRAGService>();
+
+// Per-session conversation tracking: maps sessionId → Set of conversation_ids
+// Ensures conversation isolation across 500+ editor instances.
+const mcpSessionConversations = new Map<string, Set<string>>();
+
 const SESSION_TTL_MS = 30 * 60 * 1000;
 
 setInterval(() => {
@@ -44,6 +55,8 @@ setInterval(() => {
   for (const [id, session] of mcpSessions) {
     if (now - new Date(session.updatedAt).getTime() > SESSION_TTL_MS) {
       mcpSessions.delete(id);
+      mcpRagInstances.delete(id); // cleanup per-session RAG
+      mcpSessionConversations.delete(id); // cleanup per-session conversations
     }
   }
 }, 60_000);
@@ -77,6 +90,19 @@ function touchSession(sessionId: string, method?: string) {
 
 function sessionClientName(session?: McpSessionRecord) {
   return session?.clientInfo?.name || 'unknown';
+}
+
+/**
+ * Get the per-session RAG instance for the given sessionId.
+ * Falls back to the global singleton if no per-session instance exists.
+ * This ensures 500+ independent folders never clobber each other's workspace.
+ */
+function getSessionRag(sessionId?: string): DiskRAGService {
+  if (sessionId && mcpRagInstances.has(sessionId)) {
+    return mcpRagInstances.get(sessionId)!;
+  }
+  // Fallback: global singleton (legacy / non-session contexts)
+  return getRagService();
 }
 
 async function getSessionSummary() {
@@ -353,11 +379,44 @@ async function handleJsonRpcMethod(body: JsonRpcRequest, sessionIdHeader: string
     });
 
     // ─── Register connected client with directory tracking ──────────────
-    const rootDir = body.params?.rootDirectory
+    const rawRootDir = body.params?.rootDirectory
       || body.params?.workspaceFolder
       || body.params?.directory
       || process.env.WORKSPACE_ROOT
       || process.cwd();
+
+    // ── Path normalization: handle Windows paths, unresolved variables ──
+    let rootDir = String(rawRootDir);
+
+    // Check for unresolved variables like ${WORKSPACE_ROOT} or $(pwd)
+    if (rootDir.includes('${') || rootDir.includes('$(')) {
+      console.warn(`⚠️ MCP: Unresolved variable in rootDirectory: "${rootDir}" — falling back to process.cwd()`);
+      rootDir = process.cwd();
+    }
+
+    // Check for Windows paths (drive letter like C:\ or C:/)
+    const windowsPathMatch = rootDir.match(/^([a-zA-Z]):[/\\]/);
+    if (windowsPathMatch) {
+      const winDrive = windowsPathMatch[1].toLowerCase();
+      // Convert C:\Users\sahon\s3 → /mnt/c/Users/sahon/s3 (WSL convention)
+      // substring(2) skips "C:" → "\Users\sahon\s3" then replace backslashes
+      const winPart = rootDir.substring(2).replace(/\\/g, '/');
+      const wslPath = `/mnt/${winDrive}${winPart}`;
+      console.warn(`⚠️ MCP: Windows path detected: "${rootDir}" → converted to WSL path: "${wslPath}"`);
+      rootDir = wslPath;
+    }
+
+    // Check for backslashes (indicates Windows-style path)
+    if (rootDir.includes('\\') && !rootDir.includes('${')) {
+      rootDir = rootDir.replace(/\\/g, '/');
+      console.warn(`⚠️ MCP: Backslash path normalized: "${rootDir}"`);
+    }
+
+    // Validate the path exists, fall back to cwd if not
+    if (!fs.existsSync(rootDir)) {
+      console.warn(`⚠️ MCP: rootDirectory does not exist: "${rootDir}" — falling back to process.cwd()`);
+      rootDir = process.cwd();
+    }
 
     const registeredClient = registerClient({
       clientId: sessionId,
@@ -370,6 +429,39 @@ async function handleJsonRpcMethod(body: JsonRpcRequest, sessionIdHeader: string
         : undefined,
     });
     console.log(`🔌 MCP client registered: ${clientInfo?.name || 'unknown'} → ${registeredClient.rootDirectory}`);
+
+    // ── Per-Session RAG + SSOT Auto-Init ────────────────────────────
+    // Each MCP session gets its OWN DiskRAGService instance so that
+    // 500+ folders with separate editor instances never clobber each other.
+    const sessionRag = new DiskRAGService();
+    try {
+      const initResult = await sessionRag.setWorkingDirectory(rootDir, { autoInit: true });
+      if (!initResult.needsPermission) {
+        if (!sessionRag.ssotExists()) {
+          const scan = await sessionRag.scanProject();
+          const template = sessionRag.generateSSOTTemplate(scan);
+          sessionRag.saveSSOT(template);
+          console.log(`📄 SSOT auto-created for MCP session ${sessionId} → ${rootDir}`);
+        }
+        console.log(`🧟 Per-session RAG ready: session=${sessionId} dir=${sessionRag.currentDir}`);
+      } else {
+        console.warn(`⚠️ MCP session ${sessionId}: RAG needs permission for ${rootDir}`);
+      }
+    } catch (e: any) {
+      console.warn(`⚠️ MCP session ${sessionId}: RAG auto-init failed — ${e?.message || e}`);
+    }
+    mcpRagInstances.set(sessionId, sessionRag);
+
+    // Broadcast session created event to all SSE subscribers
+    broadcastAgentEvent({
+      type: 'session_created',
+      timestamp: new Date().toISOString(),
+      payload: {
+        sessionId,
+        clientName: clientInfo?.name,
+        rootDirectory: rootDir,
+      },
+    });
 
     recordRuntimeEvent({
       timestamp: new Date().toISOString(),
@@ -482,7 +574,7 @@ async function handleJsonRpcMethod(body: JsonRpcRequest, sessionIdHeader: string
 
   if (method === 'resources/read') {
     const uri = String(body.params?.uri || '');
-    const rag = getRagService();
+    const rag = getSessionRag(sessionIdHeader);
     const index = getVectorIndexService();
     const stateDb = getStateDb();
 
@@ -553,9 +645,23 @@ async function handleJsonRpcMethod(body: JsonRpcRequest, sessionIdHeader: string
   if (method === 'tools/call') {
     const name = String(body.params?.name || '');
     const args = body.params?.arguments || {};
-    const rag = getRagService();
+    // Use per-session RAG so 500+ independent folders never collide
+    const rag = getSessionRag(sessionIdHeader);
     const index = getVectorIndexService();
     const stateDb = getStateDb();
+
+    // ── DEBUG: Log every tools/call entry ──────────────────────
+    console.log(`🔧 MCP tools/call: name="${name}" args=${JSON.stringify(args).substring(0, 300)} session=${sessionIdHeader || '-'}`);
+    recordRuntimeEvent({
+      timestamp: new Date().toISOString(),
+      category: 'mcp',
+      event: 'tools_call_received',
+      sessionId: sessionIdHeader || undefined,
+      method,
+      status: 'received',
+      details: { toolName: name, argKeys: Object.keys(args) },
+    });
+    // ─────────────────────────────────────────────────────────
 
     if (name === 'workspace_index') {
       const directory = String(args.directory || '');
@@ -572,6 +678,18 @@ async function handleJsonRpcMethod(body: JsonRpcRequest, sessionIdHeader: string
           response.statusCode = 403;
           response.body = rpcError(id, -32001, 'Permission required', { message: rag.requestPermissionMessage('scan') });
           return response;
+        }
+        // ── SSOT Existence Check: ensure SSOT.md exists before indexing ──
+        // If SSOT is missing, auto-create it so the agent never works blind.
+        if (!rag.ssotExists()) {
+          try {
+            const scan = await rag.scanProject();
+            const template = rag.generateSSOTTemplate(scan);
+            rag.saveSSOT(template);
+            console.log(`📄 workspace_index: SSOT auto-created for ${resolvedDir}`);
+          } catch (e: any) {
+            console.warn(`⚠️ workspace_index: SSOT auto-create failed — ${e?.message || e}`);
+          }
         }
       }
       const result = await index?.indexDirectory(resolvedDir, {
@@ -624,6 +742,15 @@ async function handleJsonRpcMethod(body: JsonRpcRequest, sessionIdHeader: string
         return response;
       }
       const conversationId = crypto.randomUUID();
+
+      // Track conversation per session for isolation
+      if (sessionIdHeader) {
+        if (!mcpSessionConversations.has(sessionIdHeader)) {
+          mcpSessionConversations.set(sessionIdHeader, new Set());
+        }
+        mcpSessionConversations.get(sessionIdHeader)!.add(conversationId);
+      }
+
       ensureConversation(stateDb, {
         conversation_id: conversationId,
         workspace_id: args.workspace_id ? String(args.workspace_id) : undefined,
@@ -990,13 +1117,39 @@ async function handleJsonRpcMethod(body: JsonRpcRequest, sessionIdHeader: string
 
     response.statusCode = 404;
     response.body = rpcError(id, -32601, 'Unknown tool', { name });
+    console.warn(`⚠️ MCP Unknown tool: "${name}" session=${sessionIdHeader || '-'} — known tools: workspace_index, workspace_search, conversation_create, conversation_history, conversation_list, ssot_read, project_status, agent_routes, read_file, list_files, search_code, find_files, get_file_info, run_command, web_search`);
+    recordRuntimeEvent({
+      timestamp: new Date().toISOString(),
+      category: 'mcp',
+      event: 'unknown_tool',
+      sessionId: sessionIdHeader || undefined,
+      method,
+      status: 'error',
+      details: { toolName: name },
+    });
     return response;
   }
 
   if (method.startsWith('notifications/')) {
+    // ── DEBUG: Log notifications ──────────────────────────────
+    console.log(`📢 MCP notification: ${method} session=${sessionIdHeader || '-'}`);
+    // ─────────────────────────────────────────────────────────
     response._noBody = true;
     return response;
   }
+
+  // ── DEBUG: Unknown method ──────────────────────────────────
+  console.warn(`⚠️ MCP Unknown method: "${method}" session=${sessionIdHeader || '-'}`);
+  recordRuntimeEvent({
+    timestamp: new Date().toISOString(),
+    category: 'mcp',
+    event: 'unknown_method',
+    sessionId: sessionIdHeader || undefined,
+    method,
+    status: 'error',
+    details: { method },
+  });
+  // ─────────────────────────────────────────────────────────
 
   response.statusCode = 404;
   response.body = rpcError(id, -32601, 'Method not found', { method });
@@ -1006,8 +1159,21 @@ async function handleJsonRpcMethod(body: JsonRpcRequest, sessionIdHeader: string
 export const handleMcpJsonRpc = async (req: Request, res: Response) => {
   const body = req.body as JsonRpcRequest;
 
+  // ── DEBUG: Log every incoming MCP request ──────────────────────
+  const reqMethod = body?.method || 'unknown';
+  const reqId = body?.id ?? '-';
+  const reqSession = req.get('Mcp-Session-Id') || req.get('mcp-session-id') || '-';
+  const reqAccept = req.get('Accept') || '-';
+  const reqContentType = req.get('Content-Type') || '-';
+  console.log(`📥 MCP INCOMING: method=${reqMethod} id=${reqId} session=${reqSession} accept=${reqAccept} content-type=${reqContentType}`);
+  if (reqMethod !== 'initialize' && reqMethod !== 'notifications/initialized' && !reqMethod.startsWith('notifications/')) {
+    console.log(`📥 MCP BODY: ${JSON.stringify(body).substring(0, 500)}`);
+  }
+  // ─────────────────────────────────────────────────────────────
+
   try {
     if (!body || typeof body !== 'object') {
+      console.warn('⚠️ MCP: Invalid request body');
       return res.status(400).json(rpcError(null, -32600, 'Invalid Request'));
     }
 
@@ -1047,6 +1213,10 @@ export const handleMcpJsonRpc = async (req: Request, res: Response) => {
         res.status(result.statusCode);
       }
 
+      // ── DEBUG: Log SSE response ────────────────────────────
+      const sseStatusCode = result.statusCode || 200;
+      console.log(`📤 MCP SSE RESPONSE: method=${reqMethod} status=${sseStatusCode} session=${reqSession}`);
+      // ─────────────────────────────────────────────────────
       sendSseEvent(res, 'message', result.body);
       sendSseEvent(res, 'done', {});
       res.end();
@@ -1062,15 +1232,25 @@ export const handleMcpJsonRpc = async (req: Request, res: Response) => {
     }
 
     if (result._noBody) {
+      // ── DEBUG: Log 204 response ───────────────────────────
+      console.log(`📤 MCP JSON RESPONSE: method=${reqMethod} status=204 session=${reqSession}`);
+      // ─────────────────────────────────────────────────────
       return res.status(204).end();
     }
 
     if (result.statusCode) {
+      // ── DEBUG: Log error response ──────────────────────────
+      console.log(`📤 MCP JSON RESPONSE: method=${reqMethod} status=${result.statusCode} session=${reqSession} body=${JSON.stringify(result.body).substring(0, 300)}`);
+      // ─────────────────────────────────────────────────────
       return res.status(result.statusCode).json(result.body);
     }
 
+    // ── DEBUG: Log success response ──────────────────────────
+    console.log(`📤 MCP JSON RESPONSE: method=${reqMethod} status=200 session=${reqSession}`);
+    // ─────────────────────────────────────────────────────
     return res.json(result.body);
   } catch (err: any) {
+    console.error(`❌ MCP ERROR: method=${reqMethod} session=${reqSession} error=${err?.message}`);
     return res.status(500).json(rpcError(null, -32000, err?.message || 'Internal error'));
   }
 };
@@ -1140,6 +1320,15 @@ export const handleMcpDeleteSession = async (req: Request, res: Response) => {
   }
 
   mcpSessions.delete(sessionId);
+  mcpRagInstances.delete(sessionId); // cleanup per-session RAG
+  mcpSessionConversations.delete(sessionId); // cleanup per-session conversations
+
+  // Broadcast session terminated event
+  broadcastAgentEvent({
+    type: 'session_terminated',
+    timestamp: new Date().toISOString(),
+    payload: { sessionId, clientName: sessionClientName(session) },
+  });
 
   // Also disconnect from client tracker
   disconnectClient(sessionId);

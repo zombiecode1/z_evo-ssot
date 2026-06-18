@@ -1,12 +1,23 @@
 {
   "_comment": "Windsurf MCP Configuration for ZombieCoder",
-  
+  "_usage_local": "Place at ~/.codeium/windsurf/mcp_config.json (user home) or open via Windsurf Settings → Cascade → MCP Servers → Configure",
+  "_usage_remote": "Use the remote URL for cloud bridge access (no local server needed)",
+  "_feature_ssot": "SSOT.md auto-created on first MCP initialize — agent context ready instantly",
+  "_note_windsurf_format": "Official Windsurf MCP config uses root key 'mcpServers'. For HTTP servers use 'serverUrl' field. For stdio use 'command' + 'args'. File location: ~/.codeium/windsurf/mcp_config.json. See: https://docs.windsurf.com/mcp",
+
   "mcpServers": {
+    "zombiecoder-remote": {
+      "serverUrl": "https://g.zombiecoder.my.id/mcp",
+      "_description": "ZombieCoder cloud bridge — auto-SSOT, per-session RAG, agent tools"
+    },
+    "zombiecoder-local": {
+      "serverUrl": "http://localhost:9999/mcp",
+      "_description": "Local ZombieCoder bridge (requires: npm start)"
+    },
     "zombiecoder-stdio": {
       "command": "node",
       "args": ["dist/mcp/server-entry.js"],
-      "cwd": "${workspaceFolder}",
-      "_description": "Spawn MCP server directly (standalone)"
+      "_description": "Spawn MCP server directly (standalone mode — requires full project checkout)"
     }
   }
 }

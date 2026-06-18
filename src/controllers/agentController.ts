@@ -18,10 +18,41 @@ import { addEditorConnection } from '../admin/db';
 import { startWorkspaceWatcher, WorkspaceWatcher } from '../services/workspaceWatcher';
 import { VectorIndexService } from '../services/vectorIndexService';
 import { callMcpTool, getMcpTools, isMcpConnected } from '../mcp/client';
+import { broadcastAgentEvent } from '../services/eventBroadcaster';
 
 function stripThinkBlocks(text: string): string {
   if (!text) return text;
   return text.replace(/^\s*<think>[\s\S]*?<\/think>\s*/i, '');
+}
+
+/**
+ * After agent finishes work, rescan the project and update SSOT
+ * so it always reflects the latest state of the codebase.
+ * This ensures the agent never works with stale project context.
+ */
+async function autoUpdateSsot(directory?: string) {
+  if (!directory || !ragService || !ragService.hasWorkingDir) return;
+  try {
+    const resolvedDir = path.resolve(String(directory));
+    if (ragService.currentDir !== resolvedDir) return;
+    console.log(`[SSOT] Auto-updating after agent work for ${resolvedDir}`);
+    const scanResult = await ragService.scanProject();
+    const template = ragService.generateSSOTTemplate(scanResult);
+    ragService.saveSSOT(template);
+    console.log(`[SSOT] Updated: ${scanResult.files.length} files scanned`);
+    // Broadcast SSOT update event to all SSE subscribers
+    broadcastAgentEvent({
+      type: 'ssot_updated',
+      timestamp: new Date().toISOString(),
+      payload: {
+        directory: resolvedDir,
+        filesScanned: scanResult.files.length,
+        fileCount: scanResult.files.length,
+      },
+    });
+  } catch (e: any) {
+    console.warn(`[SSOT] Auto-update failed: ${e?.message || e}`);
+  }
 }
 
 function snapshotRagState(directory: string) {
@@ -573,6 +604,8 @@ export const handleAgentChat = async (req: Request, res: Response) => {
         };
         res.write(`data: ${JSON.stringify(finalChunk)}\n\n`);
         res.write('data: [DONE]\n\n');
+        // ── Auto-Update SSOT after agent work (fire-and-forget) ──
+        autoUpdateSsot(directory);
         return res.end();
       }
       return;
@@ -599,6 +632,11 @@ export const handleAgentChat = async (req: Request, res: Response) => {
         addConversationMessage(stateDb, { conversation_id: resolvedConvoId, role: 'assistant', content: assistant });
       }
     }
+
+    // ── Auto-Update SSOT after agent work ─────────────────────────
+    // Rescan the project and update SSOT so the agent never works
+    // with stale project context.
+    await autoUpdateSsot(directory);
 
     return res.json({
       ...pipelineResult,

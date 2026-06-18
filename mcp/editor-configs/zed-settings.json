@@ -1,17 +1,34 @@
 {
   "_comment": "Zed MCP Configuration for ZombieCoder",
-  
+  "_usage_local": "Merge this into ~/.config/zed/settings.json or your project .zed/settings.json",
+  "_usage_remote": "Use the remote URL to connect without running a local server",
+  "_feature_ssot": "SSOT.md auto-generated on MCP initialize — project context ready immediately",
+
   "context_servers": {
+    "zombiecoder-remote": {
+      "url": "https://g.zombiecoder.my.id/mcp",
+      "_description": "ZombieCoder cloud bridge — auto-SSOT, full agent capabilities"
+    },
+    "zombiecoder-local": {
+      "url": "http://localhost:9999/mcp",
+      "_description": "Local ZombieCoder bridge (requires: npm start)"
+    },
     "zombiecoder-stdio": {
       "command": "node",
       "args": ["dist/mcp/server-entry.js"],
       "cwd": "${workspaceFolder}",
-      "_description": "Spawn MCP server directly (standalone)"
+      "_description": "Spawn MCP server directly (standalone mode)"
     }
   },
   "agent": {
     "tool_permissions": {
       "tools": {
+        "mcp:zombiecoder-remote:verify_session": { "default": "allow" },
+        "mcp:zombiecoder-remote:run_agent": { "default": "allow" },
+        "mcp:zombiecoder-remote:ping_agent": { "default": "allow" },
+        "mcp:zombiecoder-local:verify_session": { "default": "allow" },
+        "mcp:zombiecoder-local:run_agent": { "default": "allow" },
+        "mcp:zombiecoder-local:ping_agent": { "default": "allow" },
         "mcp:zombiecoder-stdio:verify_session": { "default": "allow" },
         "mcp:zombiecoder-stdio:run_agent": { "default": "allow" },
         "mcp:zombiecoder-stdio:ping_agent": { "default": "allow" }

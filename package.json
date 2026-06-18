@@ -17,6 +17,7 @@
     "@langchain/langgraph": "^1.4.2",
     "@langchain/mcp-adapters": "^1.1.3",
     "@langchain/openai": "^1.4.7",
+    "@mcp-use/cli": "^3.5.3-canary.4",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ai": "^6.0.206",
     "better-sqlite3": "^11.10.0",
@@ -29,7 +30,7 @@
     "groq-sdk": "^0.5.0",
     "http-proxy-middleware": "^3.0.7",
     "langchain": "^1.2.10",
-    "mcp-use": "^1.28.0",
+    "mcp-use": "^1.32.2-canary.4",
     "multer": "^2.1.1",
     "openai": "^6.42.0",
     "react": "^18.0.0",
@@ -48,5 +49,20 @@
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
-  }
+  },
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zombiecode1/z_evo-ssot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zombiecode1/z_evo-ssot/issues"
+  },
+  "homepage": "https://github.com/zombiecode1/z_evo-ssot#readme"
 }

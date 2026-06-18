@@ -1,22 +1,37 @@
 {
   "_comment": "JetBrains MCP Configuration for ZombieCoder",
-  "_usage": "Import this into Settings | Tools | AI Assistant | Model Context Protocol (MCP)",
+  "_usage_local": "Place at ~/.config/JetBrains/GlobalConfig/ or IDE-specific config (e.g. IntelliJIdea2024.3/options/). Can also configure via Settings → Tools → AI Assistant → Model Context Protocol (MCP) → Add",
+  "_usage_remote_ui": "For remote: Use Settings → Tools → AI Assistant → MCP → Add → HTTP Server → paste URL (https://g.zombiecoder.my.id/mcp)",
+  "_feature_ssot": "SSOT.md and .zombiecoder/ auto-created on MCP initialize — zero config",
+  "_note_jetbrains_format": "Official JetBrains MCP JSON uses root key 'mcpServers' with 'command' + 'args' (stdio). For HTTP servers, use Settings UI or mcp-remote proxy. Docs: https://www.jetbrains.com/help/ai-assistant/mcp.html",
 
   "mcpServers": {
+    "zombiecoder-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://g.zombiecoder.my.id/mcp"
+      ],
+      "enabled": true,
+      "_description": "ZombieCoder cloud bridge via mcp-remote proxy — SSOT auto-initialized, per-session RAG"
+    },
+    "zombiecoder-local": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "http://localhost:9999/mcp"
+      ],
+      "enabled": true,
+      "_description": "Local ZombieCoder bridge via mcp-remote proxy (requires: npm start)"
+    },
     "zombiecoder-stdio": {
       "command": "node",
       "args": ["dist/mcp/server-entry.js"],
       "cwd": "${workspaceFolder}",
-      "env": {
-        "WORKSPACE_DIR": "${workspaceFolder}"
-      },
-      "enabled": true,
-      "_description": "Recommended: local MCP server started by JetBrains AI Assistant"
-    },
-    "zombiecoder-bridge": {
-      "url": "http://localhost:9999/mcp",
       "enabled": false,
-      "_description": "Optional bridge: use if you want the running Proxi server instead of spawning local MCP"
+      "_description": "Standalone MCP server (use if bridge is not running — requires full project checkout)"
     }
   }
 }

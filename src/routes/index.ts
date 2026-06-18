@@ -186,6 +186,16 @@ router.post('/v1/agent/directory', handleSetDirectory);
 router.post('/v1/agent/permission', handleGrantPermission);
 router.post('/v1/agent/create-session', handleCreateEditorSession);
 router.get('/v1/agent/status', handleProjectStatus);
+router.get('/v1/agent/events', (req: Request, res: Response) => {
+  // SSE real-time event stream for agent activities
+  const { subscribeToAgentEvents } = require('../services/eventBroadcaster');
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  subscribeToAgentEvents(res);
+});
 router.post('/v1/agent/rescan', handleRescan);
 router.get('/v1/agent/ssot', handleReadSSOT);
 router.get('/v1/agent/routes', handleAgentRoutes);

@@ -193,6 +193,36 @@ SSOT.md is auto-generated documentation that:
 
 ---
 
+## 🖥️ Editor Configurations
+
+MCP configuration files for various editors are in the `mcp/editor-configs/` directory.
+Each editor uses a different format, verified against official documentation:
+
+| Editor | Config File | Format Notes |
+|--------|------------|--------------|
+| **VS Code** | `mcp/editor-configs/vscode-mcp.json` | Standalone file uses `"servers"` root key (not `"mcp": { "servers" }`) |
+| **Windsurf** | `mcp/editor-configs/windsurf-mcp_config.json` | HTTP servers use `"serverUrl"` field, not `"url"` |
+| **JetBrains** | `mcp/editor-configs/jetbrains-mcp.json` | Only supports **stdio** transport; HTTP/sse servers require the `mcp-remote` proxy |
+| **Zed** | `mcp/editor-configs/zed-settings.json` | Uses `"context_servers"` + `"url"` format |
+| **Generic** | `.mcp.json` (root) | Cross-editor format with `mcp-remote` proxy |
+
+### ⚠️ Important: JetBrains mcp-remote Dependency
+
+JetBrains IDEs (IntelliJ IDEA, PhpStorm, WebStorm) only support stdio transport for MCP.
+To connect to the ZombieCoder server (which uses HTTP/SSE transport), you need to install and use `mcp-remote` as a proxy:
+
+```bash
+# Install mcp-remote globally
+npm install -g mcp-remote@latest
+
+# Or use npx (no install needed)
+npx -y mcp-remote@latest http://localhost:9999/mcp
+```
+
+This is already configured in `mcp/editor-configs/jetbrains-mcp.json` — just point the `.json` file path in your IDE's MCP settings.
+
+---
+
 ## 👨‍💻 Developer
 
 **Sahon Srabon**

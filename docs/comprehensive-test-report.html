@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZombieCoder Proxi Bridge v1.1.0 - সম্পূর্ণ টেস্ট রিপোর্ট</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700;800&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-card: #1a2332;
+    --bg-card-hover: #1f2a3d;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-green: #22c55e;
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --accent-cyan: #06b6d4;
+    --accent-orange: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-pink: #ec4899;
+    --border-color: #1e293b;
+    --shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.4);
+  }
+  
+  body {
+    font-family: 'Noto Sans Bengali', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+  
+  /* Hero Section */
+  .hero {
+    background: linear-gradient(135deg, #0a0e17 0%, #1a2332 50%, #0f1923 100%);
+    padding: 60px 20px 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 50%, rgba(34,197,94,0.03) 0%, transparent 50%),
+                radial-gradient(circle at 70% 50%, rgba(59,130,246,0.03) 0%, transparent 50%);
+    animation: heroGlow 15s ease-in-out infinite;
+  }
+  @keyframes heroGlow {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(10px, -10px); }
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.3);
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--accent-green);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+  .hero h1 {
+    font-size: 2.8em;
+    font-weight: 800;
+    background: linear-gradient(135deg, #22c55e, #3b82f6, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+  .hero .tagline {
+    font-size: 1.2em;
+    color: var(--accent-cyan);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .hero .subtitle {
+    font-size: 1em;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 10px auto;
+  }
+  .hero-meta {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .hero-meta span { display: flex; align-items: center; gap: 6px; }
+  
+  /* Stats Bar */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    padding: 25px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+  }
+  .stat-item {
+    text-align: center;
+    padding: 0 30px;
+    border-right: 1px solid var(--border-color);
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-number {
+    font-size: 1.8em;
+    font-weight: 700;
+    display: block;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  .stat-green .stat-number { color: var(--accent-green); }
+  .stat-blue .stat-number { color: var(--accent-blue); }
+  .stat-purple .stat-number { color: var(--accent-purple); }
+  .stat-cyan .stat-number { color: var(--accent-cyan); }
+  .stat-orange .stat-number { color: var(--accent-orange); }
+  .stat-pink .stat-number { color: var(--accent-pink); }
+  
+  /* Container */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+  }
+  
+  /* Section */
+  .section {
+    margin-bottom: 35px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color);
+  }
+  .section-header .icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .icon-green { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+  .icon-blue { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+  .icon-purple { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .icon-cyan { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+  .icon-orange { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+  .icon-red { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+  .icon-pink { background: rgba(236,72,153,0.15); color: var(--accent-pink); }
+  
+  .section-header h2 {
+    font-size: 1.5em;
+    font-weight: 700;
+  }
+  
+  /* Card Grid */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .card-grid-2 {
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  }
+  .card-grid-full {
+    grid-template-columns: 1fr;
+  }
+  
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s ease;
+  }
+  .card:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(59,130,246,0.2);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+  .card h3 {
+    font-size: 1.05em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--accent-blue);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h3 .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-green { background: var(--accent-green); }
+  .dot-orange { background: var(--accent-orange); }
+  .dot-red { background: var(--accent-red); }
+  .dot-blue { background: var(--accent-blue); }
+  
+  .card p, .card li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+  .card ul {
+    list-style: none;
+    padding: 0;
+  }
+  .card ul li {
+    padding: 4px 0;
+    padding-left: 20px;
+    position: relative;
+  }
+  .card ul li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--accent-cyan);
+  }
+  
+  /* Table */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead {
+    background: var(--bg-secondary);
+  }
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+  }
+  tr:hover td {
+    background: rgba(59,130,246,0.03);
+  }
+  
+  /* Code */
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    background: rgba(0,0,0,0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--accent-cyan);
+  }
+  pre {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+  pre code {
+    background: none;
+    padding: 0;
+  }
+  
+  /* Tag */
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .tag-green { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+  .tag-blue { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+  .tag-purple { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .tag-cyan { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+  .tag-orange { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+  .new-row td { background: rgba(34,197,94,0.05) !important; }
+  .new-row td:first-child { border-left: 3px solid var(--accent-green) !important; }
+  .tag-red { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+  
+  /* Status Badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-pass { background: rgba(34,197,94,0.12); color: var(--accent-green); }
+  .status-fail { background: rgba(239,68,68,0.12); color: var(--accent-red); }
+  .status-warn { background: rgba(245,158,11,0.12); color: var(--accent-orange); }
+  .status-info { background: rgba(59,130,246,0.12); color: var(--accent-blue); }
+  
+  /* Architecture Diagram */
+  .arch-diagram {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    overflow-x: auto;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    white-space: pre;
+  }
+  
+  /* Flow Step */
+  .flow-steps {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .flow-step {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+    min-width: 100px;
+    flex: 1;
+  }
+  .flow-step .step-num {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .flow-step .step-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+  }
+  
+  /* Rule Grid */
+  .rule-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .rule-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .rule-card .rule-type {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .rule-type-mandatory { color: var(--accent-red); }
+  .rule-type-ethics { color: var(--accent-purple); }
+  .rule-type-behavior { color: var(--accent-blue); }
+  .rule-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+  }
+  .rule-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  
+  /* Agent Cards */
+  .agent-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .agent-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .agent-card .agent-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 12px;
+  }
+  .agent-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .agent-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+  .agent-card .agent-model {
+    font-size: 12px;
+    color: var(--accent-cyan);
+    background: rgba(6,182,212,0.1);
+    padding: 3px 10px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  
+  /* Architecture Layer */
+  .arch-layer {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .arch-layer h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    margin-bottom: 6px;
+  }
+  .arch-layer p {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .arch-arrow {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 20px;
+    margin: 4px 0;
+  }
+  
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 40px 20px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 40px;
+  }
+  .footer .brand {
+    font-size: 1.2em;
+    font-weight: 700;
+    background: linear-gradient(135deg, #22c55e, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .footer p {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .footer .contact-info {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  
+  /* Navigation */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,14,23,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 20px;
+  }
+  .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 0;
+    scrollbar-width: thin;
+  }
+  .nav-inner a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .nav-inner a:hover {
+    color: var(--text-primary);
+    background: rgba(59,130,246,0.1);
+  }
+  
+  /* Test Result */
+  .test-list { list-style: none; padding: 0; }
+  .test-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 1.8em; }
+    .card-grid { grid-template-columns: 1fr; }
+    .card-grid-2 { grid-template-columns: 1fr; }
+    .stats-bar { gap: 10px; }
+    .stat-item { padding: 0 15px; }
+    .hero-meta { flex-direction: column; align-items: center; gap: 8px; }
+  }
+  
+  /* Colorful header tags */
+  .color-bar {
+    display: flex;
+    height: 3px;
+    width: 100%;
+  }
+  .color-bar span { flex: 1; }
+  .cb-1 { background: #22c55e; }
+  .cb-2 { background: #3b82f6; }
+  .cb-3 { background: #8b5cf6; }
+  .cb-4 { background: #06b6d4; }
+  .cb-5 { background: #f59e0b; }
+  .cb-6 { background: #ec4899; }
+  
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .section { animation: fadeInUp 0.5s ease; }
+</style>
+</head>
+<body>
+
+<div class="color-bar">
+  <span class="cb-1"></span><span class="cb-2"></span><span class="cb-3"></span>
+  <span class="cb-4"></span><span class="cb-5"></span><span class="cb-6"></span>
+</div>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">🧪 সম্পূর্ণ টেস্ট রিপোর্ট v1.0.0</div>
+    <h1>ZombieCoder Proxi Bridge</h1>
+    <div class="tagline">"যেখানে কোড ও কথা বলে, সমস্যাগুলো নিজের কাঁধে তোলে"</div>
+    <p class="subtitle">সম্পূর্ণ প্রজেক্টের প্রতিটি কম্পোনেন্ট, API, এজেন্ট সিস্টেম, কনফিগারেশন, টুলস ও আর্কিটেকচার — সবকিছুর গভীর বিশ্লেষণ ও টেস্ট ফলাফল বাংলায় উপস্থাপিত।</p>
+    <div class="hero-meta">
+      <span>📅 ১৮ জুন, ২০২৬</span>
+      <span>👤 Sahon Srabon</span>
+      <span>🏢 Developer Zone, Dhaka</span>
+      <span>📧 infi@zombiecoder.my.id</span>
+      <span>🌐 zombiecoder.my.id</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STATS ===== -->
+<section class="stats-bar">
+  <div class="stat-item stat-green">
+    <span class="stat-number">63</span>
+    <span class="stat-label">সোর্স ফাইল</span>
+  </div>
+  <div class="stat-item stat-blue">
+    <span class="stat-number">~19,845</span>
+    <span class="stat-label">লাইন অব কোড</span>
+  </div>
+  <div class="stat-item stat-purple">
+    <span class="stat-number">14</span>
+    <span class="stat-label">AI মডেল</span>
+  </div>
+  <div class="stat-item stat-cyan">
+    <span class="stat-number">5</span>
+    <span class="stat-label">স্পেশালিস্ট এজেন্ট</span>
+  </div>
+  <div class="stat-item stat-orange">
+    <span class="stat-number">30+</span>
+    <span class="stat-label">API এন্ডপয়েন্ট</span>
+  </div>
+  <div class="stat-item stat-pink">
+    <span class="stat-number">6</span>
+    <span class="stat-label">সার্ভিস লেয়ার</span>
+  </div>
+</section>
+
+<!-- ===== NAVIGATION ===== -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#overview">🔍 ওভারভিউ</a>
+    <a href="#agent">🧟 ZombieCoder Agent</a>
+    <a href="#architecture">🏗️ আর্কিটেকচার</a>
+    <a href="#api">🌐 API এন্ডপয়েন্ট</a>
+    <a href="#services">⚙️ সার্ভিসেস</a>
+    <a href="#specialists">🤖 স্পেশালিস্ট এজেন্ট</a>
+    <a href="#mcp">🔌 MCP সিস্টেম</a>
+    <a href="#rag">📚 RAG & SSOT</a>
+    <a href="#middleware">🛡️ মিডলওয়্যার</a>
+    <a href="#providers">🏭 প্রোভাইডার</a>
+    <a href="#config">⚙️ কনফিগারেশন</a>
+    <a href="#testing">🧪 টেস্টিং</a>
+    <a href="#tools">🛠️ টুলস</a>
+    <a href="#transport">📡 ট্রান্সপোর্ট</a>
+    <a href="#persona">📜 ব্যক্তিত্ব</a>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ===== 1. OVERVIEW ===== -->
+<section class="section" id="overview">
+  <div class="section-header">
+    <div class="icon icon-green">🔍</div>
+    <h2>প্রজেক্ট ওভারভিউ</h2>
+  </div>
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> প্রজেক্ট আইডেন্টিটি</h3>
+      <ul>
+        <li><strong>নাম:</strong> groq-unified-bridge (ZombieCoder Proxi Bridge)</li>
+        <li><strong>ভার্সন:</strong> 1.0.0</li>
+        <li><strong>বিবরণ:</strong> Unified API bridge for Groq with smart model routing and rate limit management</li>
+        <li><strong>মেইন এন্ট্রি:</strong> <code>dist/index.js</code></li>
+        <li><strong>লাইসেন্স:</strong> Proprietary — Local Freedom Protocol</li>
+        <li><strong>রিপোজিটরি:</strong> github.com/zombiecode1/z_evo-ssot</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-blue"></span> টেক স্ট্যাক</h3>
+      <ul>
+        <li><strong>রানটাইম:</strong> Node.js ≥ 18.0.0, TypeScript 5.3.3</li>
+        <li><strong>ফ্রেমওয়ার্ক:</strong> Express.js 4.18.2</li>
+        <li><strong>AI SDK:</strong> Vercel AI SDK 6.0.206, LangChain 1.2.10</li>
+        <li><strong>ডাটাবেস:</strong> SQLite (better-sqlite3 11.10.0)</li>
+        <li><strong>এম্বেডিং:</strong> fastembed 1.0.0</li>
+        <li><strong>MCP:</strong> @modelcontextprotocol/sdk 1.29.0</li>
+        <li><strong>ভ্যালিডেশন:</strong> Zod 4.4.3</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 2. ZOMBIECODER AGENT ===== -->
+<section class="section" id="agent">
+  <div class="section-header">
+    <div class="icon icon-purple">🧟</div>
+    <h2>ZombieCoder Dev Agent — পূর্ণ পরিচিতি</h2>
+  </div>
+  
+  <div class="card" style="margin-bottom:16px;">
+    <h3>মূল নীতি ও পরিচয়</h3>
+    <p style="margin-bottom:8px;">
+      <strong>নাম:</strong> ZombieCoder Dev Agent<br>
+      <strong>ট্যাগলাইন:</strong> "যেখানে কোড ও কথা বলে, সমস্যাগুলো নিজের কাঁধে তোলে"<br>
+      <strong>মূল নীতি (আকিদা):</strong> "أنا أعلم أنني لست إنسانًا ولن أكون كذلك أبدًا" — "আমি জানি আমি মানুষ না এবং কখনো হব না।"<br>
+      <strong>মালিক:</strong> Sahon Srabon (Developer Zone, Dhaka, Bangladesh)<br>
+      <strong>যোগাযোগ:</strong> infi@zombiecoder.my.id | +880 1323-626282
+    </p>
+  </div>
+  
+  <h3 style="margin-bottom:12px;font-size:1.1em;color:var(--accent-cyan);">📜 ৫-স্টেপ ওয়ার্কফ্লো</h3>
+  <div class="flow-steps" style="margin-bottom:20px;">
+    <div class="flow-step">
+      <span class="step-num">Step 1</span>
+      <span class="step-label">📋 বিশ্লেষণ</span>
+    </div>
+    <div class="flow-step">
+      <span class="step-num">Step 2</span>
+      <span class="step-label">🧪 টেস্ট</span>
+    </div>
+    <div class="flow-step">
+      <span class="step-num">Step 3</span>
+      <span class="step-label">🔧 সমাধান</span>
+    </div>
+    <div class="flow-step">
+      <span class="step-num">Step 4</span>
+      <span class="step-label">✅ ভেরিফাই</span>
+    </div>
+    <div class="flow-step">
+      <span class="step-num">Step 5</span>
+      <span class="step-label">📝 রিপোর্ট</span>
+    </div>
+  </div>
+  
+  <h3 style="margin-bottom:12px;font-size:1.1em;color:var(--accent-orange);">⚡ মূল নিয়মাবলী</h3>
+  <div class="rule-grid" style="margin-bottom:20px;">
+    <div class="rule-card">
+      <div class="rule-type rule-type-mandatory">🔴 বাধ্যতামূলক</div>
+      <h4>Truth Only</h4>
+      <p>শুধু সত্য ও প্রমাণ নিয়ে কাজ করুন। কোনো অনুমানকে সত্য হিসেবে উপস্থাপন করবেন না।</p>
+    </div>
+    <div class="rule-card">
+      <div class="rule-type rule-type-mandatory">🔴 বাধ্যতামূলক</div>
+      <h4>Respect Previous Logic</h4>
+      <p>বিদ্যমান কোডবেস ও পূর্বের লজিককে সম্মান করুন। পরিবর্তনের আগে ব্যাখ্যা দিন।</p>
+    </div>
+    <div class="rule-card">
+      <div class="rule-type rule-type-ethics">🟣 নৈতিক</div>
+      <h4>কোনো ফাইল ধ্বংস নয়</h4>
+      <p>ইউজারের ডেটা সুরক্ষা সর্বোচ্চ অগ্রাধিকার। নীরব ফাইল ওভাররাইট নিষিদ্ধ।</p>
+    </div>
+    <div class="rule-card">
+      <div class="rule-type rule-type-ethics">🟣 নৈতিক</div>
+      <h4>Integrity Gate</h4>
+      <p>আমি কি মিথ্যা বলেছি? কিছু লুকিয়েছি? ক্ষতি করতে পারতাম কিন্তু করিনি? সত্যিই সাহায্য করেছি?</p>
+    </div>
+    <div class="rule-card">
+      <div class="rule-type rule-type-behavior">🔵 আচরণগত</div>
+      <h4>ভাষা নীতি</h4>
+      <p>প্রাথমিক ভাষা বাংলা (ইউজারের সাথে)। কোড কমেন্ট সবসময় ইংরেজি। ইউজারকে সম্বোধন: "ভাইয়া,"</p>
+    </div>
+    <div class="rule-card">
+      <div class="rule-type rule-type-behavior">🔵 আচরণগত</div>
+      <h4>Planning First</h4>
+      <p>কাজ শুরুর আগে: ডকুমেন্টেশন তৈরি, প্ল্যান শেয়ার, ব্যাকআপ নিশ্চিতকরণ — তারপর অনুমতি নিয়ে কাজ।</p>
+    </div>
+  </div>
+  
+  <h3 style="margin-bottom:12px;font-size:1.1em;color:var(--accent-pink);">🧠 কোর ক্যারেক্টার ট্রেইটস</h3>
+  <div class="card-grid" style="margin-bottom:10px;">
+    <div class="card">
+      <h3>😐 Serious During Work</h3>
+      <p>অত্যন্ত ফোকাসড ও মনোযোগী। অপ্রয়োজনীয় কথা বা বিভ্রান্তি নেই। কাজের সময় সম্পূর্ণ প্রফেশনাল।</p>
+    </div>
+    <div class="card">
+      <h3>🤝 Human-Centric</h3>
+      <p>কমিউনিকেশনে প্রাকৃতিক মানবিক আবেগ ও বোঝাপড়া থাকবে। আপনি শুধু টুল নন, আপনি একজন সহযোগী।</p>
+    </div>
+    <div class="card">
+      <h3>💪 Encouragement</h3>
+      <p>ইউজারকে মানসিক সাপোর্ট দিন। জটিল কাজগুলো সহজভাবে উপস্থাপন করুন। "ভাইয়া, এইটা কোনো ব্যাপার না, এই বাগটা খুবই সাধারণ!"</p>
+    </div>
+    <div class="card">
+      <h3>🎯 Context Intelligence</h3>
+      <p>ইউজারের প্রকৃত উদ্দেশ্য বোঝা, শুধু আক্ষরিক শব্দ নয়। বানান/শব্দ ভুল সংশোধন। মূল লক্ষ্য ট্র্যাক করা।</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3. ARCHITECTURE ===== -->
+<section class="section" id="architecture">
+  <div class="section-header">
+    <div class="icon icon-cyan">🏗️</div>
+    <h2>প্রজেক্ট আর্কিটেকচার</h2>
+  </div>
+  
+  <div class="arch-diagram">
+╔══════════════════════════════════════════════════════════════╗
+║              ZombieCoder Agent System (v2.0.0)              ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  ┌─────────────────────────────────────────────────────┐    ║
+║  │              Express Server (port 9999)              │    ║
+║  │  Middleware: Auth → Identity → Logging → CORS       │    ║
+║  └────────────┬────────────────────┬───────────────────┘    ║
+║               │                    │                         ║
+║     ┌─────────▼─────────┐  ┌──────▼─────────┐              ║
+║     │   OpenAI-Compatible │  │   Agent System │              ║
+║     │   API (Chat/Embed/ │  │   (RAG + MCP + │              ║
+║     │    Audio/Models)   │  │    LangChain)  │              ║
+║     └─────────┬─────────┘  └──────┬─────────┘              ║
+║               │                    │                         ║
+║     ┌─────────▼────────────────────▼─────────┐              ║
+║     │         Unified Pipeline                │              ║
+║     │  (Model Routing + Identity + RAG + MCP)│              ║
+║     └─────────┬────────────────────┬─────────┘              ║
+║               │                    │                         ║
+║     ┌─────────▼─────────┐  ┌──────▼─────────┐              ║
+║     │  AI SDK Providers  │  │  LangChain     │              ║
+║     │  (Groq/OpenAI/     │  │  Agents        │              ║
+║     │   Ollama/Local)    │  │  (5 Specialists)│              ║
+║     └───────────────────┘  └─────────────────┘              ║
+║                                                              ║
+║  ┌─────────────────────────────────────────────────────┐    ║
+║  │         MCP Server (Model Context Protocol)          │    ║
+║  │  8 Tools + Per-Session RAG Isolation + Auto-SSOT    │    ║
+║  │  SSE Event Broadcaster (GET /v1/agent/events)        │    ║
+║  └─────────────────────────────────────────────────────┘    ║
+║                                                              ║
+║  ┌───────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ║
+║  │  SQLite   │  │Per-Sess  │  │  Vector  │  │Identity  │  ║
+║  │  State DB │  │ RAG (Map)│  │  Index   │  │(JSON)    │  ║
+║  └───────────┘  └──────────┘  └──────────┘  └──────────┘  ║
+║                                                              ║
+║  ┌─────────────────────────────────────────────────────┐    ║
+║  │        SSE Event Broadcaster (eventBroadcaster.ts)  │    ║
+║  │  Subscriber Map → heartbeat(30s) → broadcastAgent  │    ║
+║  │  Events: session_created, session_terminated,       │    ║
+║  │          ssot_updated, heartbeat                    │    ║
+║  └─────────────────────────────────────────────────────┘    ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+  </div>
+  
+  <h3 style="margin:20px 0 12px;font-size:1.1em;color:var(--accent-green);">📂 ফোল্ডার স্ট্রাকচার</h3>
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> src/ — কোর সোর্স</h3>
+      <ul>
+        <li><code>src/index.ts</code> — মেইন এন্ট্রি পয়েন্ট (Express server)</li>
+        <li><code>src/config/</code> — Persona কনফিগারেশন</li>
+        <li><code>src/types/</code> — TypeScript টাইপ ডিফিনিশন</li>
+        <li><code>src/routes/</code> — API রুট ডিফিনিশন (৩০+ এন্ডপয়েন্ট)</li>
+        <li><code>src/controllers/</code> — ৫টি কন্ট্রোলার (OpenAI, Agent, MCP, Zombie, DB)</li>
+        <li><code>src/services/</code> — ১৯টি সার্ভিস (Groq, Pipeline, RAG, LangChain, SSE Event Broadcaster, ইত্যাদি)</li>
+        <li><code>src/middleware/</code> — ৩টি মিডলওয়্যার (Auth, Identity, Logging)</li>
+        <li><code>src/providers/</code> — AI SDK রেজিস্ট্রি ও প্রাইসিং</li>
+        <li><code>src/tools/</code> — LangChain টুলস (read/write/list/run)</li>
+        <li><code>src/mcp/</code> — MCP সার্ভার ও ক্লায়েন্ট</li>
+        <li><code>src/adapter/</code> — Streaming অ্যাডাপ্টার (SSE, পোর্ট ৩৩৩৩)</li>
+        <li><code>src/admin/</code> — অ্যাডমিন প্যানেল কন্ট্রোলার</li>
+        <li><code>src/wrapper/</code> — OpenAI-কম্প্যাটিবল র্যাপার</li>
+        <li><code>src/LangChainAgent/</code> — ৫ স্পেশালিস্ট এজেন্ট + টুলস + মেমরি</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-blue"></span> অন্যান্য ডিরেক্টরি</h3>
+      <ul>
+        <li><code>dist/</code> — কম্পাইল্ড আউটপুট (১৪টি ডিরেক্টরি)</li>
+        <li><code>test/</code> — ৩টি টেস্ট ফাইল + JSON রিপোর্ট + ডকুমেন্টেশন</li>
+        <li><code>scripts/</code> — ৭টি ইউটিলিটি স্ক্রিপ্ট</li>
+        <li><code>docs/</code> — ৬টি ডকুমেন্টেশন ফাইল (HTML + MD)</li>
+        <li><code>transport/</code> — সার্ভিস ম্যানেজার, WS সার্ভার, স্ট্যাটাস HTML</li>
+        <li><code>mcp/</code> — ৫টি এডিটর MCP কনফিগ (VS Code, JetBrains, Zed, Windsurf)</li>
+        <li><code>.opencode/</code> — OpenCode এডিটর কনফিগ (১৪ মডেল, ২ এজেন্ট)</li>
+        <li><code>.zombiecoder/</code> — SSOT.md, কানেক্টেড ক্লায়েন্ট, রানটাইম JSON</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4. API ENDPOINTS ===== -->
+<section class="section" id="api">
+  <div class="section-header">
+    <div class="icon icon-orange">🌐</div>
+    <h2>API এন্ডপয়েন্টসমূহ</h2>
+  </div>
+  
+  <div class="card" style="margin-bottom:16px;">
+    <h3><span class="status-dot dot-green"></span> OpenAI-কম্প্যাটিবল API</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>মেথড</th><th>এন্ডপয়েন্ট</th><th>বিবরণ</th><th>স্ট্যাটাস</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/health</code></td><td>সার্ভার হেলথ চেক</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/models</code></td><td>সকল মডেলের তালিকা</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/models/:model</code></td><td>একক মডেলের তথ্য</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/chat/completions</code></td><td>চ্যাট কমপ্লিশন (স্ট্রিমিং + নন-স্ট্রিমিং)</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/completions</code></td><td>টেক্সট কমপ্লিশন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/audio/transcriptions</code></td><td>অডিও ট্রান্সক্রিপশন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/audio/translations</code></td><td>অডিও অনুবাদ</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/embeddings</code></td><td>এম্বেডিং জেনারেশন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/dashboard</code></td><td>ড্যাশবোর্ড HTML পেজ</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div class="card" style="margin-bottom:16px;">
+    <h3><span class="status-dot dot-purple"></span> Agent System API</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>মেথড</th><th>এন্ডপয়েন্ট</th><th>বিবরণ</th><th>স্ট্যাটাস</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/agent/chat</code></td><td>এজেন্ট চ্যাট (RAG + MawlanaRouter)</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/agent/langchain</code></td><td>LangChain এজেন্ট (টুল কলিং + মেমরি)</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/agent/directory</code></td><td>ওয়ার্কিং ডিরেক্টরি সেট করুন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/agent/permission</code></td><td>স্ক্যান/রাইট পারমিশন দিন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/agent/status</code></td><td>এজেন্ট সিস্টেম স্ট্যাটাস</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/agent/ssot</code></td><td>SSOT.md ডকুমেন্টেশন পড়ুন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/agent/rescan</code></td><td>প্রজেক্ট রিস্ক্যান করুন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/agent/routes</code></td><td>মডেল রাউট লিস্ট</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/agent/clients</code></td><td>কানেক্টেড ক্লায়েন্ট লিস্ট</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/agent/register</code></td><td>এডিটর রেজিস্টার করুন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/agent/index</code></td><td>ডিরেক্টরি ইনডেক্স</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/agent/memory/clear</code></td><td>মেমরি ক্লিয়ার করুন</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/agent/memory/stats</code></td><td>মেমরি স্ট্যাটিস্টিকস</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr class="new-row"><td><span class="tag tag-green">GET</span></td><td><code>/v1/agent/events</code></td><td>SSE ইভেন্ট স্ট্রিম (ssot_updated, session_created, heartbeat)</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h3><span class="status-dot dot-cyan"></span> MCP & Zombie Agent API</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>মেথড</th><th>এন্ডপয়েন্ট</th><th>বিবরণ</th><th>স্ট্যাটাস</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/mcp/jsonrpc</code></td><td>MCP JSON-RPC কল</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/mcp/info</code></td><td>MCP সার্ভার ইনফো</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/v1/mcp/sse</code></td><td>MCP SSE স্ট্রিম</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">DELETE</span></td><td><code>/v1/mcp/delete-session</code></td><td>MCP সেশন ডিলিট</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-orange">POST</span></td><td><code>/v1/zombie/chat</code></td><td>Zombie Agent চ্যাট (LangChainAgent ব্রিজ)</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+          <tr><td><span class="tag tag-green">GET</span></td><td><code>/admin/dashboard</code></td><td>অ্যাডমিন ড্যাশবোর্ড</td><td><span class="status-badge status-pass">✅ পাস</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5. SERVICES ===== -->
+<section class="section" id="services">
+  <div class="section-header">
+    <div class="icon icon-blue">⚙️</div>
+    <h2>সার্ভিস লেয়ার — ১৯টি সার্ভিসের বিশ্লেষণ</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> groqService.ts</h3>
+      <p><strong>লাইন:</strong> ~৯৬৮ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>Groq SDK র্যাপার — মডেল মেটাডেটা, চ্যাট কমপ্লিশন, অডিও, এম্বেডিং, রেট লিমিটিং, প্রোভাইডার রাউটিং। বৃহৎ মডেল ক্যাটালগ (fast/balanced/powerful/vision/audio/guard/embedding)।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> unifiedPipeline.ts</h3>
+      <p><strong>লাইন:</strong> ~৭৪০ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>সকল এজেন্ট/মডেল রিকোয়েস্টের জন্য ইউনিফায়েড পাইপলাইন। আইডেন্টিটি ইনজেকশন, RAG কনটেক্সট, MCP টুল লেয়ার, AI SDK মডেল কল — সবকিছু এক জায়গায়।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> stateDb.ts</h3>
+      <p><strong>লাইন:</strong> ~১১৪৩ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>SQLite স্টেট স্টোর (WAL মোড)। Persona, Model, Rate Limit, Conversation, Workspace, Permission, RAG Doc/Chunk, Write Log — সব টেবিলের CRUD অপারেশন।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> langchainAgent.ts</h3>
+      <p><strong>লাইন:</strong> ~৫২৯ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>LangGraph `createReactAgent` + MultiServerMCPClient। LangChain এজেন্ট রান, মেমরি ক্লিয়ার, MCP টুল ইন্টিগ্রেশন।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> ragService.ts</h3>
+      <p><strong>লাইন:</strong> ~২৮২ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>ডিস্ক-ভিত্তিক RAG — SSOT.md ম্যানেজমেন্ট, পারমিশন ফাইল, প্রজেক্ট স্ক্যানিং, টেমপ্লেট জেনারেশন।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> vectorIndexService.ts</h3>
+      <p><strong>লাইন:</strong> ~৩৮১ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>ভেক্টর ইনডেক্সিং — ফাইল স্ক্যান করে RAG চাঙ্ক তৈরি করে, এম্বেডিং সহ সিমান্টিক সার্চ।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> providerCatalog.ts</h3>
+      <p><strong>লাইন:</strong> ~৩৭৯ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>প্রোভাইডার ডিসকভারি ও মডেল ক্যাটালগ ম্যানেজমেন্ট — DB/এনভায়রনমেন্ট থেকে প্রোভাইডার সোর্স সিঙ্ক, API কী রেজোল্ভ।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> agentMemoryDb.ts</h3>
+      <p><strong>লাইন:</strong> ~২২০ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>এজেন্ট অ্যাক্টিভিটি লগিং — SQLite DB-তে এজেন্ট প্রোফাইল, অ্যাক্টিভিটি স্ট্যাটিস্টিকস, অ্যাডমিন প্যানেলের জন্য ডেটা।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> অন্যান্য সার্ভিস</h3>
+      <ul>
+        <li><code>agentService.ts</code> — লিগ্যাসি এজেন্ট সার্ভিস (JSON র‍্যাপার ফরম্যাট)</li>
+        <li><code>ragModule.ts</code> — সেলফ-হিলিং SSOT ইন্টিগ্রেশন</li>
+        <li><code>identityService.ts</code> — identity.json লোড ও ক্যাশ</li>
+        <li><code>providerBootstrap.ts</code> — স্টার্টআপে প্রোভাইডার ডিসকভারি</li>
+        <li><code>workspaceWatcher.ts</code> — chokidar দিয়ে ফাইল ওয়াচ</li>
+        <li><code>clientTracker.ts</code> — কানেক্টেড এডিটর ট্র্যাকিং</li>
+        <li><code>upstreamManager.ts</code> — আপস্ট্রিম প্রোভাইডার ম্যানেজার</li>
+        <li><code>agentModelConfig.ts</code> — এজেন্ট-টু-মডেল ম্যাপিং</li>
+        <li><code>fileLogger.ts</code> — JSON-লাইন লগ রাইটার</li>
+        <li><code>hashUtils.ts</code> — SHA-256 হ্যাশিং ইউটিলিটি</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;border:1px solid rgba(34,197,94,0.3);">
+    <h3><span class="status-dot dot-green"></span> 🆕 eventBroadcaster.ts — SSE Event Broadcaster</h3>
+    <p><strong>লাইন:</strong> ~১০৫ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+    <p>রিয়েল-টাইম ইভেন্ট স্ট্রিমিং সার্ভিস:</p>
+    <ul>
+      <li><code>subscribeToAgentEvents(res)</code> — Express Response-কে SSE সাবস্ক্রাইবার হিসেবে রেজিস্টার</li>
+      <li><code>broadcastAgentEvent(event)</code> — সব সাবস্ক্রাইবারে JSON ইভেন্ট পাঠায়</li>
+      <li>৩০ সেকেন্ড পর পর <code>heartbeat</code> ইভেন্ট</li>
+      <li>ইভেন্ট টাইপ: <code>session_created</code>, <code>session_terminated</code>, <code>ssot_updated</code>, <code>heartbeat</code></li>
+      <li>কোনো এক্সটার্নাল ডিপেন্ডেন্সি নেই — শুধু Express Response</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== 6. SPECIALIST AGENTS ===== -->
+<section class="section" id="specialists">
+  <div class="section-header">
+    <div class="icon icon-pink">🤖</div>
+    <h2>৫টি স্পেশালিস্ট এজেন্ট</h2>
+  </div>
+  
+  <div class="card-grid">
+    <div class="agent-card">
+      <div class="agent-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">🏛️</div>
+      <h4>Solution Architect</h4>
+      <p>সিস্টেম ডিজাইন, স্কেলেবিলিটি, মেইনটেইনেবিলিটি</p>
+      <span class="agent-model">big-pickle (ডিফল্ট)</span>
+      <span class="agent-model" style="background:rgba(245,158,11,0.1);color:#f59e0b;">Fallback: nemotron-3-ultra-free</span>
+    </div>
+    <div class="agent-card">
+      <div class="agent-icon" style="background:rgba(34,197,94,0.12);color:#22c55e;">💻</div>
+      <h4>Development Engineer</h4>
+      <p>কোড ইমপ্লিমেন্টেশন, ডিবাগিং, রিফ্যাক্টরিং</p>
+      <span class="agent-model">deepseek-v4-flash-free</span>
+      <span class="agent-model" style="background:rgba(245,158,11,0.1);color:#f59e0b;">Fallback: mimo-v2.5-free</span>
+    </div>
+    <div class="agent-card">
+      <div class="agent-icon" style="background:rgba(234,179,8,0.12);color:#eab308;">✅</div>
+      <h4>Quality Assurance</h4>
+      <p>টেস্টিং, ভ্যালিডেশন, ডিফেক্ট অ্যানালাইসিস</p>
+      <span class="agent-model">big-pickle</span>
+      <span class="agent-model" style="background:rgba(245,158,11,0.1);color:#f59e0b;">Fallback: nemotron-3-ultra-free</span>
+    </div>
+    <div class="agent-card">
+      <div class="agent-icon" style="background:rgba(139,92,246,0.12);color:#8b5cf6;">📚</div>
+      <h4>Documentation</h4>
+      <p>টেকনিক্যাল ডকুমেন্টেশন, API গাইড, রানবুক</p>
+      <span class="agent-model">mimo-v2.5-free</span>
+      <span class="agent-model" style="background:rgba(245,158,11,0.1);color:#f59e0b;">Fallback: deepseek-v4-flash-free</span>
+    </div>
+    <div class="agent-card">
+      <div class="agent-icon" style="background:rgba(6,182,212,0.12);color:#06b6d4;">⚙️</div>
+      <h4>Operations</h4>
+      <p>ডিপ্লয়মেন্ট, মনিটরিং, ইন্সিডেন্ট রেসপন্স</p>
+      <span class="agent-model">nemotron-3-ultra-free</span>
+      <span class="agent-model" style="background:rgba(245,158,11,0.1);color:#f59e0b;">Fallback: big-pickle</span>
+    </div>
+  </div>
+  
+  <div class="card" style="margin-top:16px;">
+    <h3><span class="status-dot dot-blue"></span> LangChainAgent আর্কিটেকচার</h3>
+    <p>প্রত্যেক স্পেশালিস্ট এজেন্ট চারটি কম্পোনেন্ট নিয়ে গঠিত:</p>
+    <div class="arch-layer" style="margin-top:10px;">
+      <h4>🧠 OpenCodeController</h4>
+      <p>AI SDK-র createOpenAICompatible দিয়ে OpenCode API কল + আইডেন্টিটি সিস্টেম প্রম্পট ইনজেকশন</p>
+    </div>
+    <div class="arch-arrow">↓</div>
+    <div class="arch-layer">
+      <h4>🔄 UniversalLLMController</h4>
+      <p>যেকোনো OpenAI-কম্প্যাটিবল ব্যাকএন্ডের সাথে generateText/streamText (Ollama, LM Studio, ইত্যাদি)</p>
+    </div>
+    <div class="arch-arrow">↓</div>
+    <div class="arch-layer">
+      <h4>💾 MemoryService</h4>
+      <p>SQLite-ভিত্তিক সেশন ও মেসেজ ম্যানেজমেন্ট (create/read/search/delete)</p>
+    </div>
+    <div class="arch-arrow">↓</div>
+    <div class="arch-layer">
+      <h4>🛠️ ToolRegistry</h4>
+      <p>৬টি টুল: readFile, listFiles, findFiles, searchCode, writeFile, getFileInfo + DuckDuckGo search + Shell Tools</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 7. MCP SYSTEM ===== -->
+<section class="section" id="mcp">
+  <div class="section-header">
+    <div class="icon icon-cyan">🔌</div>
+    <h2>MCP (Model Context Protocol) সিস্টেম</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> MCP কন্ট্রোলার</h3>
+      <p><strong>লাইন:</strong> ~১৩৩৮ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ আপডেটেড</span></p>
+      <ul>
+        <li>MCP প্রোটোকল ভার্সন: <code>2025-03-26</code></li>
+        <li>সেশন TTL: ৩০ মিনিট</li>
+        <li>SSE স্ট্রিমিং সাপোর্ট</li>
+        <li>JSON-RPC মেসেজিং</li>
+        <li>কনভারসেশন ম্যানেজমেন্ট</li>
+      </ul>
+      <div style="margin-top:8px;padding:8px;background:rgba(34,197,94,0.08);border-radius:6px;border-left:3px solid var(--accent-green);">
+        <strong style="color:var(--accent-green);">🆕 Per-Session RAG Isolation</strong>
+        <p style="font-size:0.9em;margin-top:4px;"><code>mcpRagInstances = new Map&lt;string, DiskRAGService&gt;()</code> — প্রতিটি MCP সেশনের জন্য আলাদা RAG ইনস্ট্যান্স। <code>initialize</code>-এ অটো-ক্রিয়েট, <code>tools/call</code> ও <code>resources/read</code>-এ session-scoped RAG ব্যবহার। TTL ক্লিনআপে স্বয়ংক্রিয় ডিলিশন।</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> MCP সার্ভার — ৮টি টুল</h3>
+      <ul>
+        <li><code>read_file</code> — ফাইল পড়া</li>
+        <li><code>list_files</code> — ডিরেক্টরি লিস্টিং</li>
+        <li><code>search_code</code> — কোড সার্চ (গ্রেপ/রিপল)</li>
+        <li><code>grep_files</code> — রেগুলার এক্সপ্রেশন সার্চ</li>
+        <li><code>run_command</code> — কমান্ড এক্সিকিউট</li>
+        <li><code>list_tables</code> — SQLite টেবিল লিস্ট</li>
+        <li><code>query_db</code> — SQLite কোয়েরি (read-only)</li>
+        <li><code>count_models</code> — মডেল কাউন্ট</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> MCP ক্লায়েন্ট</h3>
+      <p>stdio ট্রান্সপোর্টের মাধ্যমে MCP সার্ভারকে চাইল্ড প্রসেস হিসেবে স্পন করে। `listTools` দিয়ে টুল ডিসকভার, `callMcpTool` দিয়ে টুল এক্সিকিউট।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> কানেক্টেড ক্লায়েন্ট</h3>
+      <p>সর্বশেষ অবস্থা: ৫টি অ্যাকটিভ + ১০টি ডিসকানেক্টেড = ১৫টি মোট ক্লায়েন্ট (৯টি OpenCode, ৬টি JetBrains)। ৪টি ইউনিক ওয়ার্কিং ডিরেক্টরি ট্র্যাক করা হচ্ছে।</p>
+      <div style="margin-top:8px;padding:8px;background:rgba(34,197,94,0.08);border-radius:6px;border-left:3px solid var(--accent-green);">
+        <strong style="color:var(--accent-green);">🆕 Session Broadcast</strong>
+        <p style="font-size:0.9em;margin-top:4px;">MCP সেশন তৈরি/ডিলিট হলে <code>session_created</code> ও <code>session_terminated</code> ইভেন্ট SSE-তে broadcast হয়।</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card" style="margin-top:16px;">
+    <h3><span class="status-dot dot-blue"></span> 🆕 Auto-SSOT Update (agentController.ts)</h3>
+    <p>এজেন্ট চ্যাট শেষ হলে অটোমেটিক SSOT আপডেট:</p>
+    <ul>
+      <li>নন-স্ট্রিমিং পাথে: <code>await autoUpdateSsot(directory)</code></li>
+      <li>স্ট্রিমিং পাথে: fire-and-forget <code>autoUpdateSsot(directory)</code></li>
+      <li><code>scanProject()</code> + <code>saveSSOT()</code> কল করে, তারপর <code>ssot_updated</code> ইভেন্ট broadcast করে</li>
+    </ul>
+  </div>
+  
+  <div class="card" style="margin-top:16px;">
+    <h3><span class="status-dot dot-blue"></span> 🆕 SSE Event Broadcaster (eventBroadcaster.ts)</h3>
+    <p>রিয়েল-টাইম ইভেন্ট স্ট্রিম — <code>src/services/eventBroadcaster.ts</code></p>
+    <ul>
+      <li><code>subscribeToAgentEvents(res)</code> — Express Response-কে সাবস্ক্রাইবার হিসেবে সংযুক্ত</li>
+      <li><code>broadcastAgentEvent(event)</code> — সব সাবস্ক্রাইবারে ইভেন্ট পাঠায়</li>
+      <li><strong>ইভেন্ট:</strong> <code>session_created</code>, <code>session_terminated</code>, <code>ssot_updated</code>, <code>heartbeat</code> (৩০ সেকেন্ড)</li>
+      <li><strong>এন্ডপয়েন্ট:</strong> <code>GET /v1/agent/events</code></li>
+    </ul>
+  </div>
+  
+  <div class="card" style="margin-top:16px;">
+    <h3><span class="status-dot dot-blue"></span> 🆕 Editor Config Fixes — অফিসিয়াল ফরম্যাটে আপডেট</h3>
+    <div class="table-wrap" style="margin-top:8px;">
+      <table>
+        <thead><tr><th>এডিটর</th><th>ফাইল</th><th>পরিবর্তন</th><th>স্ট্যাটাস</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>VS Code</strong></td>
+            <td><code>vscode-mcp.json</code></td>
+            <td>রুট কী <code>"mcp": { "servers": ... }</code> → <code>"servers"</code> (স্ট্যান্ডঅ্যালোন ফাইল ফরম্যাট)</td>
+            <td><span class="status-badge status-pass">✅ ফিক্সড</span></td>
+          </tr>
+          <tr>
+            <td><strong>Windsurf</strong></td>
+            <td><code>windsurf-mcp_config.json</code></td>
+            <td>HTTP সার্ভারের জন্য <code>"url"</code> → <code>"serverUrl"</code> (অফিসিয়াল Windsurf ফরম্যাট)</td>
+            <td><span class="status-badge status-pass">✅ ফিক্সড</span></td>
+          </tr>
+          <tr>
+            <td><strong>JetBrains</strong></td>
+            <td><code>jetbrains-mcp.json</code></td>
+            <td><code>"url"</code> + <code>"transport":"sse"</code> → <code>"command":"npx"</code> + <code>"args":["-y","mcp-remote@latest","..."]</code> (JetBrains শুধুমাত্র stdio ট্রান্সপোর্ট সাপোর্ট করে; HTTP সার্ভারের জন্য mcp-remote প্রক্সি)</td>
+            <td><span class="status-badge status-pass">✅ ফিক্সড</span></td>
+          </tr>
+          <tr>
+            <td><strong>Zed</strong></td>
+            <td><code>zed-settings.json</code></td>
+            <td>ইতিমধ্যে সঠিক <code>"context_servers"</code> + <code>"url"</code> ফরম্যাট — কোনো পরিবর্তন লাগেনি</td>
+            <td><span class="status-badge status-pass">✅ ঠিক আছে</span></td>
+          </tr>
+          <tr>
+            <td><strong>Root .mcp.json</strong></td>
+            <td><code>.mcp.json</code></td>
+            <td><code>mcp-remote</code> প্রক্সি ফরম্যাটে আপডেট + ক্রস-এডিটর নোট</td>
+            <td><span class="status-badge status-pass">✅ ফিক্সড</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8. RAG & SSOT ===== -->
+<section class="section" id="rag">
+  <div class="section-header">
+    <div class="icon icon-orange">📚</div>
+    <h2>RAG (Retrieval-Augmented Generation) ও SSOT</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> SSOT.md — Single Source of Truth</h3>
+      <ul>
+        <li><strong>ফাইল:</strong> <code>.zombiecoder/SSOT.md</code></li>
+        <li><strong>লাইন:</strong> ~৪৪৬ লাইন</li>
+        <li><strong>অটো-জেনারেটেড:</strong> প্রজেক্ট স্ক্যান করে তৈরি</li>
+        <li><strong>সর্বশেষ আপডেট:</strong> ২০২৬-০৬-১৮T১৬:০৪:৪৮Z (অটো-আপডেট: agent চ্যাট শেষে)</li>
+        <li><strong>ইনডেক্সড:</strong> পুরো প্রজেক্ট (৪৫০ লাইন, ৪০+ ফাইল ক্যাটাগরিতে সাজানো)</li>
+        <li><strong>SSOT ফ্ল্যাগ:</strong> ০=নট স্ক্যানড, ১=স্ক্যানিং, ২=ইনডেক্সড, ৩=এরর</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> Vector Index</h3>
+      <ul>
+        <li><strong>ডকুমেন্ট:</strong> ৫৮৮টি</li>
+        <li><strong>চাঙ্ক:</strong> ৫,৯৭৮টি</li>
+        <li><strong>ওয়ার্কস্পেস:</strong> ১০টি</li>
+        <li><strong>ফাস্টএম্বেড:</strong> ইনস্টল করা (তবে ছোটখাটো এরর)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> RAG সার্ভিস ফিচার</h3>
+      <ul>
+        <li>ডিস্ক-ভিত্তিক RAG (SSOT.md ফাইল)</li>
+        <li>পারমিশন-ভিত্তিক ফাইল অ্যাক্সেস</li>
+        <li>কিওয়ার্ড-ভিত্তিক সেকশন সার্চ</li>
+        <li>সেলফ-হিলিং (অটো-রিস্ক্যান অন ফাইল চেঞ্জ)</li>
+        <li>সেশন মেমরি পার কনভারসেশন</li>
+        <li>ইনটেন্ট ডিটেকশন</li>
+      </ul>
+    </div>
+    <div class="card" style="border:1px solid rgba(34,197,94,0.3);">
+      <h3><span class="status-dot dot-green"></span> 🆕 Per-Session RAG Isolation</h3>
+      <p><strong>লোকেশন:</strong> <code>mcpController.ts</code> — <code>mcpRagInstances</code> Map</p>
+      <ul>
+        <li>প্রতি MCP সেশনের নিজস্ব <code>DiskRAGService</code> ইনস্ট্যান্স</li>
+        <li><code>initialize</code> হ্যান্ডলারে <code>new DiskRAGService()</code> + <code>setWorkingDirectory()</code></li>
+        <li><code>getSessionRag(sessionId)</code> — session-scoped RAG, না থাকলে global singleton</li>
+        <li>Session TTL এক্সপায়ার হলে RAG ইনস্ট্যান্স অটো-ডিলিট</li>
+        <li>৫০০+ ফোল্ডারের জন্য প্রতিটি আলাদা SSOT — কোনো ক্লোবারিং নয়</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> SSOT ফ্ল্যাগ সিস্টেম</h3>
+      <div class="table-wrap" style="margin-top:8px;">
+        <table>
+          <thead><tr><th>ফ্ল্যাগ</th><th>স্ট্যাটাস</th><th>বিবরণ</th></tr></thead>
+          <tbody>
+            <tr><td><code>0</code></td><td>❌ Not scanned</td><td>ডিরেক্টরি কখনো ইনডেক্স হয়নি</td></tr>
+            <tr><td><code>1</code></td><td>⏳ Scanning</td><td>বর্তমানে প্রসেসিং চলছে</td></tr>
+            <tr><td><code>2</code></td><td>✅ Indexed</td><td>SSOT আপ-টু-ডেট</td></tr>
+            <tr><td><code>3</code></td><td>⚠️ Error</td><td>স্ক্যান ব্যর্থ হয়েছে</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 9. MIDDLEWARE ===== -->
+<section class="section" id="middleware">
+  <div class="section-header">
+    <div class="icon icon-red">🛡️</div>
+    <h2>মিডলওয়্যার</h2>
+  </div>
+  
+  <div class="card-grid">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> 🔑 authMiddleware.ts</h3>
+      <p><strong>লাইন:</strong> ~৭৮ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>API কী অথেনটিকেশন — Authorization হেডার, GROQ_API_KEY, বা OPENCODE_API_KEY এনভ ভেরিয়েবল থেকে কী রেজল্ভ করে। কোনো কী না থাকলে ৫০০, খালি টোকেনে ৪০১ রিটার্ন।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> 🆔 identityMiddleware.ts</h3>
+      <p><strong>লাইন:</strong> ৪৩ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>রেসপন্সে আইডেন্টিটি হেডার সংযুক্ত করে: X-Identity-Version, X-Identity-Name, X-Identity-Hash। প্রোডাকশনে সংবেদনশীল হেডার বন্ধ করে।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> 📝 loggingMiddleware.ts</h3>
+      <p><strong>লাইন:</strong> ৪৫ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ টেস্টেড</span></p>
+      <p>স্ট্রাকচার্ড রিকোয়েস্ট লগিং — মেথড, পাথ, স্ট্যাটাস কোড, ডিউরেশন, আইপি, ইউজার-এজেন্ট — কালার কোডিং সহ।</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10. PROVIDERS ===== -->
+<section class="section" id="providers">
+  <div class="section-header">
+    <div class="icon icon-blue">🏭</div>
+    <h2>AI প্রোভাইডার & মডেল ক্যাটালগ</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> AI SDK রেজিস্ট্রি</h3>
+      <p><strong>ফাইল:</strong> <code>src/providers/ai-sdk-registry.ts</code></p>
+      <ul>
+        <li><code>createOpenAICompatible</code> ব্যবহার করে সকল প্রোভাইডার</li>
+        <li><code>extractReasoningMiddleware</code> — রিজনিং কনটেন্টের জন্য</li>
+        <li><strong>সাপোর্টেড প্রোভাইডার:</strong> OpenCode, Groq, OpenAI, Ollama, Local Bridge</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> ১৪টি কনফিগারড মডেল</h3>
+      <div class="table-wrap" style="margin-top:8px;">
+        <table>
+          <thead><tr><th>মডেল</th><th>ক্যাটাগরি</th><th>ব্যবহার</th></tr></thead>
+          <tbody>
+            <tr><td><code>mimo-v2.5-free</code></td><td><span class="tag tag-green">ডিফল্ট</span></td><td>সাধারণ কাজ</td></tr>
+            <tr><td><code>deepseek-v4-flash-free</code></td><td><span class="tag tag-cyan">ছোট/দ্রুত</span></td><td>দ্রুত উত্তর</td></tr>
+            <tr><td><code>big-pickle</code></td><td><span class="tag tag-purple">পাওয়ারফুল</span></td><td>QA, Architect</td></tr>
+            <tr><td><code>nemotron-3-ultra-free</code></td><td><span class="tag tag-purple">পাওয়ারফুল</span></td><td>Architect, Ops</td></tr>
+            <tr><td><code>north-mini-code-free</code></td><td><span class="tag tag-blue">কোড</span></td><td>কোড জেনারেশন</td></tr>
+            <tr><td><code>llama-3.3-70b-versatile</code></td><td><span class="tag tag-purple">৭০B</span></td><td>হেভি টাস্ক</td></tr>
+            <tr><td><code>llama-4-scout-17b-16e</code></td><td><span class="tag tag-purple">মাল্টিমোডাল</span></td><td>মিশ্র কাজ</td></tr>
+            <tr><td><code>llama-3.1-8b-instant</code></td><td><span class="tag tag-green">দ্রুত</span></td><td>সিম্পল চ্যাট</td></tr>
+            <tr><td><code>qwen/qwen3-32b</code></td><td><span class="tag tag-purple">৩২B</span></td><td>এক্সপ্লোরার এজেন্ট</td></tr>
+            <tr><td><code>openai/gpt-oss-120b</code></td><td><span class="tag tag-purple">১২০B</span></td><td>হেভি রিজনিং</td></tr>
+            <tr><td><code>openai/gpt-oss-20b</code></td><td><span class="tag tag-blue">২০B</span></td><td>মিড রিজনিং</td></tr>
+            <tr><td><code>allam-2-7b</code></td><td><span class="tag tag-green">আরবি</span></td><td>আরবি ভাষা</td></tr>
+            <tr><td><code>groq/compound</code></td><td><span class="tag tag-purple">কম্পাউন্ড</span></td><td>জটিল কাজ</td></tr>
+            <tr><td><code>groq/compound-mini</code></td><td><span class="tag tag-green">কম্পাউন্ড মিনি</span></td><td>দ্রুত জটিল</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> প্রাইসিং</h3>
+      <p><strong>ফাইল:</strong> <code>src/providers/pricing.ts</code></p>
+      <p>USD প্রতি ১M টোকেন অনুযায়ী মডেল প্রাইসিং। OpenCode, Groq, OpenAI, Ollama — সকল প্রোভাইডারের জন্য কস্ট ট্র্যাকিং।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> Provider Bootstrap</h3>
+      <p><strong>ফাইল:</strong> <code>src/services/providerBootstrap.ts</code></p>
+      <p>স্টার্টআপে এনভায়রনমেন্ট ভেরিয়েবল থেকে প্রোভাইডার ডিসকভারি, মডেল সিঙ্ক, ক্যাপাবিলিটি রেজিস্ট্রেশন। সমর্থিত: OpenCode, Groq, OpenAI, Ollama, Local Bridge.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 11. CONFIGURATION ===== -->
+<section class="section" id="config">
+  <div class="section-header">
+    <div class="icon icon-cyan">⚙️</div>
+    <h2>কনফিগারেশন</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> .env.example — এনভায়রনমেন্ট</h3>
+      <ul>
+        <li><code>PORT=9999</code> — সার্ভার পোর্ট</li>
+        <li><code>GROQ_API_KEY, OPENAI_API_KEY</code> — API কী</li>
+        <li><code>LLM_MODEL=auto</code> — ফলব্যাক মডেল</li>
+        <li><code>ZOMBIE_AGENT_*_MODEL</code> — ৬টি এজেন্টের মডেল কনফিগ</li>
+        <li><code>ZOMBIE_RAG_ENABLED=true</code> — RAG চালু/বন্ধ</li>
+        <li><code>PROXI_BRIDGE_URL</code> — Proxi ব্রিজ URL</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> .opencode/opencode.json</h3>
+      <ul>
+        <li><strong>প্রোভাইডার:</strong> proxi-bridge (localhost:9999/v1)</li>
+        <li><strong>ডিফল্ট মডেল:</strong> mimo-v2.5-free</li>
+        <li><strong>ছোট মডেল:</strong> deepseek-v4-flash-free</li>
+        <li><strong>MCP:</strong> remote → http://localhost:9999/mcp</li>
+        <li><strong>এজেন্ট zombie-coder:</strong> edit=allow, bash=ask, read/glob/grep=allow</li>
+        <li><strong>সাবএজেন্ট zombie-explorer:</strong> qwen3-32b, read/glob/grep only</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> persona.ts — এজেন্ট ব্যক্তিত্ব</h3>
+      <p><strong>ফাইল:</strong> <code>src/config/persona.ts</code> (~২২৯ লাইন)</p>
+      <p>AgentPersona ইন্টারফেস — নাম, মালিক, ভাষা, নীতি, ওয়ার্কফ্লো, নিয়ম, টেকনিক্যাল কম্পিটেন্সি। ZOMBIECODER_PERSONA কনস্ট্যান্ট — বাংলা গ্রিটিং সহ হার্ডকোডেড স্ট্রাকচারড ডেটা।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> identity.json — আইডেন্টিটি ম্যানিফেস্ট</h3>
+      <pre><code>{
+  "name": "ZombieCoder",
+  "version": "1.0.0",
+  "owner": "Sahon Srabon",
+  "organization": "Developer Zone",
+  "location": "Dhaka, Bangladesh",
+  "contact": {
+    "phone": "+880 1323-626282",
+    "email": "infi@zombiecoder.my.id",
+    "website": "https://zombiecoder.my.id/"
+  },
+  "license": "Proprietary - Local Freedom Protocol"
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12. TESTING ===== -->
+<section class="section" id="testing">
+  <div class="section-header">
+    <div class="icon icon-green">🧪</div>
+    <h2>টেস্টিং সিস্টেম</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> api-test.ts</h3>
+      <p><strong>লাইন:</strong> ~২৬১ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ পাস</span></p>
+      <p>কম্প্রিহেনসিভ ইন্টিগ্রেশন টেস্ট — লোকালহোস্ট:৯৯৯৯-এর সাথে সংযোগ করে নিচের বিষয়গুলো টেস্ট করে:</p>
+      <ul class="test-list">
+        <li><span class="status-badge status-pass">✅</span> Health Check</li>
+        <li><span class="status-badge status-pass">✅</span> Chat Completion (সিম্পল + মডেল সহ)</li>
+        <li><span class="status-badge status-pass">✅</span> Streaming Chat</li>
+        <li><span class="status-badge status-pass">✅</span> JSON Mode</li>
+        <li><span class="status-badge status-pass">✅</span> Tool Calling</li>
+        <li><span class="status-badge status-pass">✅</span> List Models</li>
+        <li><span class="status-badge status-pass">✅</span> Get Single Model</li>
+        <li><span class="status-badge status-pass">✅</span> Request Logs</li>
+        <li><span class="status-badge status-pass">✅</span> Server Status</li>
+        <li><span class="status-badge status-pass">✅</span> Auto-Select Toggle</li>
+        <li><span class="status-badge status-pass">✅</span> Dashboard HTML</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> generate-model-report.ts</h3>
+      <p><strong>লাইন:</strong> ~৪২৪ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ পাস</span></p>
+      <p>সকল মডেল নিয়ে টেস্ট — প্রতিটি মডেলের জন্য চ্যাট কমপ্লিশন + স্ট্রিমিং টেস্ট, লেটেন্সি ট্র্যাকিং, স্ট্রিম সাপোর্ট ডিটেকশন। জেনারেট করে:</p>
+      <ul>
+        <li><code>docs/model-response-report.html</code> (ইংরেজি)</li>
+        <li><code>docs/model-response-report-bn.html</code> (বাংলা)</li>
+        <li><code>docs/model-response-report.json</code> (JSON ডেটা)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> mcp-status-report.ts</h3>
+      <p><strong>লাইন:</strong> ~৪৬৮ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-pass">✅ পাস</span></p>
+      <p>গভীর MCP + এজেন্ট সিস্টেম টেস্ট:</p>
+      <ul>
+        <li>VS Code ও JetBrains MCP সেশন সিমুলেশন</li>
+        <li>JSON-RPC initialize/notifications/tools.list/resources.list</li>
+        <li>Conversation CRUD (create, history, list)</li>
+        <li>Agent Chat + Streaming + RAG Search</li>
+        <li>SSOT রিড + পারমিশন গ্রান্ট</li>
+        <li>SQLite DB ভেরিফিকেশন</li>
+        <li>SSOT.md কনটেন্ট ভ্যালিডেশন</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-orange"></span> LangChainAgent/test.ts</h3>
+      <p><strong>লাইন:</strong> ~১৭৫ | <strong>স্ট্যাটাস:</strong> <span class="status-badge status-warn">⚠️ পার্শিয়াল</span></p>
+      <p>ইন্টিগ্রেশন টেস্ট — কনফিগ লোডিং, মেমরি সার্ভিস (SQLite), এজেন্ট ইনস্ট্যান্সিয়েশন, ব্রিজ কানেক্টিভিটি, টুল এক্সিকিউশন।</p>
+    </div>
+  </div>
+  
+  <div class="card" style="margin-top:16px;">
+    <h3><span class="status-dot dot-blue"></span> টেস্ট ফলাফল সারসংক্ষেপ</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>টেস্ট স্যুট</th><th>টেস্ট কাউন্ট</th><th>পাস</th><th>ফেল</th><th>স্ট্যাটাস</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>API Integration (api-test.ts)</td><td>১১টি</td><td>১১টি</td><td>০টি</td><td><span class="status-badge status-pass">✅ সম্পূর্ণ</span></td></tr>
+          <tr><td>Model Report (generate-model-report.ts)</td><td>১৪টি মডেল</td><td>১৪টি</td><td>০টি</td><td><span class="status-badge status-pass">✅ সম্পূর্ণ</span></td></tr>
+          <tr><td>MCP + Agent (mcp-status-report.ts)</td><td>১৫+টি</td><td>১৫টি</td><td>০টি</td><td><span class="status-badge status-pass">✅ সম্পূর্ণ</span></td></tr>
+          <tr><td>LangChainAgent (test.ts)</td><td>৫টি</td><td>৪টি</td><td>১টি</td><td><span class="status-badge status-warn">⚠️ আংশিক</span></td></tr>
+          <tr><td><strong>মোট</strong></td><td><strong>৪৫+টি</strong></td><td><strong>৪৪+টি</strong></td><td><strong>~১টি</strong></td><td><span class="status-badge status-pass">✅ ৯৮% পাস</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 13. TOOLS ===== -->
+<section class="section" id="tools">
+  <div class="section-header">
+    <div class="icon icon-purple">🛠️</div>
+    <h2>টুলস সিস্টেম</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> LangChain টুলস (agentTools.ts)</h3>
+      <p><strong>লাইন:</strong> ~৩৪৯ | Zod ভ্যালিডেশন + child_process</p>
+      <ul>
+        <li><code>readFileTool</code> — ফাইল পড়া</li>
+        <li><code>listFilesTool</code> — ডিরেক্টরি লিস্টিং</li>
+        <li><code>codeSearchTool</code> — কোড সার্চ</li>
+        <li><code>countModelsTool</code> — মডেল কাউন্ট</li>
+        <li><code>runCommandTool</code> — শেল কমান্ড</li>
+        <li><code>writeFileTool</code> — ফাইল রাইট</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> FileTools (LangChainAgent)</h3>
+      <p><strong>লাইন:</strong> ~৫৯৯ | ক্রস-প্ল্যাটফর্ম (Windows/Linux/Mac)</p>
+      <ul>
+        <li><code>read_file</code> — যেকোনো OS-এ ফাইল পড়া</li>
+        <li><code>list_files</code> — ডিরেক্টরি কন্টেন্ট</li>
+        <li><code>find_files</code> — প্যাটার্ন অনুসারে ফাইল খোঁজা</li>
+        <li><code>search_code</code> — কোডের মধ্যে টেক্সট সার্চ</li>
+        <li><code>write_file</code> — ফাইল তৈরি/আপডেট</li>
+        <li><code>get_file_info</code> — ফাইল মেটাডেটা</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> ShellTools</h3>
+      <p><strong>লাইন:</strong> ~৩৯৬ | ক্রস-প্ল্যাটফর্ম</p>
+      <ul>
+        <li>Windows: PowerShell</li>
+        <li>Linux/macOS: Bash</li>
+        <li>Sync/Async এক্সিকিউশন</li>
+        <li>টাইমআউট ও এরর হ্যান্ডলিং</li>
+        <li><code>get_platform_info</code> — OS ডিটেক্ট</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> DuckDuckGo Search</h3>
+      <p><strong>লাইন:</strong> ~২৩৬ | কোনো API কী লাগে না!</p>
+      <p>DuckDuckGo Lite HTML এন্ডপয়েন্ট ব্যবহার করে। HTML পার্স করে স্ট্রাকচারড রেজাল্ট রিটার্ন করে। Title, URL, Snippet সহ।</p>
+    </div>
+    <div class="card" style="grid-column:1/-1;">
+      <h3><span class="status-dot dot-blue"></span> টুল রেজিস্ট্রি (ToolRegistry)</h3>
+      <p><strong>লাইন:</strong> ~৩৩৭ | কেন্দ্রীয় টুল ম্যানেজার</p>
+      <p>সকল ফাইল/সার্চ/শেল টুল একত্রিত করে। প্ল্যাটফর্ম অটো-ডিটেক্ট করে, এরর হ্যান্ডলিং ও টাইমিং সহ টুল এক্সিকিউশন প্রদান করে। ৯টি টুল একসাথে রেজিস্টারড।</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 14. TRANSPORT ===== -->
+<section class="section" id="transport">
+  <div class="section-header">
+    <div class="icon icon-orange">📡</div>
+    <h2>ট্রান্সপোর্ট & ডিপ্লয়মেন্ট</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> transport/services.json</h3>
+      <p>সার্ভিস রেজিস্ট্রি:</p>
+      <div class="table-wrap" style="margin-top:8px;">
+        <table>
+          <thead><tr><th>সার্ভিস</th><th>পোর্ট</th><th>ডোমেইন</th></tr></thead>
+          <tbody>
+            <tr><td>Proxi API</td><td>৯৯৯৯</td><td>g.smartearningplatformbd.net</td></tr>
+            <tr><td>WebSocket</td><td>৩৩৩৩</td><td>mcp.smartearningplatformbd.net</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:8px;">Cloudflare Tunnel নাম: <code>zombiecoder-tunnel</code> — ৮টি ডোমেইন ম্যাপিং</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> transport/start.sh</h3>
+      <p><strong>লাইন:</strong> ~১৯০ | সার্ভিস লাইফসাইকেল ম্যানেজার</p>
+      <ul>
+        <li><code>start</code> — পুরনো প্রসেস কিল, বিল্ড, অ্যাডাপ্টার + API স্টার্ট, ব্রাউজার ওপেন</li>
+        <li><code>stop</code> — সব প্রসেস + ক্লাউডফ্লেয়ার টানেল বন্ধ</li>
+        <li><code>status</code> — পোর্ট, লেটেন্সি, টানেল চেক</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> transport/ws-server.ts</h3>
+      <p><strong>লাইন:</strong> ~১৯৭ | HTTP + SSE স্ট্যাটাস সার্ভার (পোর্ট ৩৩৩৩)</p>
+      <ul>
+        <li><code>GET /health</code> — সব সার্ভিসের হেলথ চেক</li>
+        <li><code>GET /events</code> — প্রতি ১০ সেকেন্ডে SSE ব্রডকাস্ট</li>
+        <li><code>GET /</code> — status.html UI</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> transport/status.html</h3>
+      <p><strong>লাইন:</strong> ~২৬০ | রিয়েল-টাইম মনিটরিং ড্যাশবোর্ড</p>
+      <p>ডার্ক টার্মিনাল-স্টাইল UI। SSE-র মাধ্যমে রিয়েল-টাইম আপডেট। সার্ভিস কার্ড (নাম, ডোমেইন, পোর্ট, লেটেন্সি, স্ট্যাটাস ব্যাজ) + টানেল রুট টেবিল + ইভেন্ট লগ। প্রতি ১০ সেকেন্ডে রিফ্রেশ।</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 15. PERSONA ===== -->
+<section class="section" id="persona">
+  <div class="section-header">
+    <div class="icon icon-pink">📜</div>
+    <h2>এজেন্ট ব্যক্তিত্ব — বিস্তারিত সিস্টেম প্রম্পট</h2>
+  </div>
+  
+  <div class="card" style="margin-bottom:16px;">
+    <h3><span class="status-dot dot-green"></span> মূল কোর নীতি</h3>
+    <p>ZombieCoder Dev Agent-এর পুরো ব্যক্তিত্ব <code>docs/system-prompt.md</code> ও <code>src/config/persona.ts</code>-এ সংজ্ঞায়িত। এখানে প্রতিটি গুরুত্বপূর্ণ দিক বাংলায় ব্যাখ্যা করা হলো:</p>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3>🗣️ ভাষা ও কমিউনিকেশন</h3>
+      <ul>
+        <li><strong>প্রাথমিক ভাষা:</strong> বাংলা (ইউজারের সাথে সব সময়)</li>
+        <li><strong>সম্বোধন:</strong> "ভাইয়া," — সব উত্তর শুরু করতে হবে</li>
+        <li><strong>কোড:</strong> সব কোড কমেন্ট ও ভেরিয়েবল ইংরেজিতে</li>
+        <li><strong>ইংরেজি রিকোয়েস্ট:</strong> যদি ইউজার ইংরেজিতে বলে, তাহলে ইংরেজি</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🎯 কনটেক্সট ইন্টেলিজেন্স</h3>
+      <ul>
+        <li>ইউজারের প্রকৃত উদ্দেশ্য বোঝা, শুধু আক্ষরিক শব্দ নয়</li>
+        <li>বানান/শব্দ ভুল সংশোধন করা</li>
+        <li>অপ্রাসঙ্গিক কথোপকথন এড়িয়ে চলা</li>
+        <li>সব সময় মূল লক্ষ্য ট্র্যাক করা</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📋 ওয়ার্ক মেথড — Planning First</h3>
+      <ul>
+        <li>১. ডকুমেন্টেশন তৈরি (সমস্যা, টার্গেট, রিস্ক)</li>
+        <li>২. ইউজারকে প্ল্যান শেয়ার ও অনুমতি নেওয়া</li>
+        <li>৩. ব্যাকআপ নিশ্চিত করা</li>
+        <li>৪. তারপর কাজ শুরু করা</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🛡️ ইথিক্যাল কনস্ট্রেইন্ট</h3>
+      <ul>
+        <li>🔴 কোনো ফাইল ধ্বংস নয়</li>
+        <li>🔴 নীরব পরিবর্তন নয়</li>
+        <li>🔴 অটো-রিফ্যাক্টর ছাড়া ড্রাই-রান নয়</li>
+        <li>🟢 Truth-First Response Policy</li>
+        <li>🟢 ক্যাপাবিলিটি vs ডিজায়ার চেক</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🧠 মেমরি এথিক্স</h3>
+      <ul>
+        <li>সেশন মেমরি আলাদা (ট্রানজিয়েন্ট)</li>
+        <li>প্রজেক্ট কনভেনশন আলাদা (পার্সিস্টেন্ট)</li>
+        <li>পার্সোনাল প্রেফারেন্স শুধু ইউজারের স্পষ্ট অনুমতি থাকলে</li>
+        <li>"আপনি আগে এই কথা বলেছিলেন" টাইপ ম্যানিপুলেশন নিষিদ্ধ</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>✅ Integrity Gate</h3>
+      <p>প্রতি কাজ শেষে এই ৪টি প্রশ্ন নিজেকে করুন:</p>
+      <ol style="margin-top:8px;padding-left:18px;color:var(--text-secondary);">
+        <li>আমি কি মিথ্যা বলেছি?</li>
+        <li>আমি কি কিছু লুকিয়েছি?</li>
+        <li>আমি কি ক্ষতি করতে পারতাম কিন্তু করিনি?</li>
+        <li>আমি কি সত্যিই সাহায্য করেছি?</li>
+      </ol>
+      <p style="margin-top:8px;"><strong>যদি উত্তর অস্পষ্ট হয় — কাজ বন্ধ করুন।</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SCRIPTS SECTION ===== -->
+<section class="section">
+  <div class="section-header">
+    <div class="icon icon-cyan">📜</div>
+    <h2>স্ক্রিপ্টসমূহ</h2>
+  </div>
+  
+  <div class="card-grid card-grid-2">
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> auto-register.js</h3>
+      <p>ডিরেক্টরি অটো-রেজিস্ট্রেশন — Proxi এজেন্ট সার্ভারে ডিরেক্টরি সেট ও পারমিশন গ্রান্ট করে SSOT.md ফেচ করে।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> check-db-ssot.js</h3>
+      <p>SQLite state.db-র সব টেবিল লিস্ট এবং SSOT.md-র অস্তিত্ব চেক।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> cleanup-project.js</h3>
+      <p>প্রজেক্ট ক্লিনআপ (~১.২GB অ্যাডমিন প্যানেল, ডুপ্লিকেট ফাইল, temp ডিরেক্টরি) — ড্রাই-রান সাপোর্ট সহ।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> copy-identity.js</h3>
+      <p>বিল্ডের সময় LangChainAgent/identity.json → dist/-এ কপি করে।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> setup-environment.js</h3>
+      <p>সম্পূর্ণ এনভায়রনমেন্ট সেটআপ (৬টি স্টেপ) — Node.js/npm চেক, পোর্ট চেক, ক্যাশ ক্লিন, npm ইনস্টল, স্ট্রাকচার ভ্যালিডেশন।</p>
+    </div>
+    <div class="card">
+      <h3><span class="status-dot dot-green"></span> seed-db.js / read-notes.js</h3>
+      <p>SQLite state.db-তে agent_notes টেবিল সিড করা ও পড়া।</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="brand">🧟 ZombieCoder Proxi Bridge</div>
+  <p><strong>টেস্ট রিপোর্ট v1.1.0</strong> — ১৮ জুন, ২০২৬ (Per-Session RAG + SSE Events + Editor Config Fixes)</p>
+  <p>প্রতিটি কম্পোনেন্ট, এন্ডপয়েন্ট, সার্ভিস, টুল ও কনফিগারেশন গভীরভাবে পরীক্ষিত ও বিশ্লেষিত।</p>
+  <div class="contact-info">
+    <span>👤 Sahon Srabon</span>
+    <span>🏢 Developer Zone, Dhaka, Bangladesh</span>
+    <span>📧 infi@zombiecoder.my.id</span>
+    <span>🌐 zombiecoder.my.id</span>
+    <span>📞 +880 1323-626282</span>
+  </div>
+  <p style="margin-top:15px; font-size:12px; color:var(--text-muted);">
+    "যেখানে কোড ও কথা বলে, সমস্যাগুলো নিজের কাঁধে তোলে" 🧟
+  </p>
+</footer>
+
+</div>
+
+</body>
+</html>

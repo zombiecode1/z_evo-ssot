@@ -1,0 +1,36 @@
+{
+  "_comment": "ZombieCoder MCP Configuration — Workspace root config for compatible editors",
+  "_feature_ssot": ".zombiecoder/SSOT.md auto-created on MCP initialize — per-session RAG isolation built in",
+  "_note_formats": "Root key differs per editor: 'mcpServers' (Cursor/Windsurf/JetBrains), 'servers' (VS Code standalone mcp.json), 'context_servers' (Zed). See mcp/editor-configs/ for per-editor examples.",
+  "_note_vscode": "VS Code supports this file as workspace-level config, but VS Code's root key is 'servers', not 'mcpServers'. Copy to .vscode/mcp.json and change root key to 'servers'. See mcp/editor-configs/vscode-mcp.json",
+
+  "mcpServers": {
+    "zombiecoder-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://g.zombiecoder.my.id/mcp"
+      ],
+      "enabled": true,
+      "_description": "ZombieCoder cloud bridge via mcp-remote — SSOT auto-init, per-session RAG, full agent"
+    },
+    "zombiecoder-local": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "http://localhost:9999/mcp"
+      ],
+      "enabled": true,
+      "_description": "Local ZombieCoder bridge via mcp-remote (requires: npm start)"
+    },
+    "zombiecoder-stdio": {
+      "command": "node",
+      "args": ["dist/mcp/server-entry.js"],
+      "cwd": "${workspaceFolder}",
+      "enabled": false,
+      "_description": "Standalone MCP server — spawns as child process (no bridge server needed)"
+    }
+  }
+}
