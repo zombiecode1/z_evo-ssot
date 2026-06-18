@@ -1,5 +1,5 @@
 {
-  "_comment": "JetBrains ZombieCoder External Tool — SSOT Auto-Generator",
+  "_comment": "JetBrains ZombieCoder External Tool - SSOT Auto-Generator",
   "_usage": "Import this as External Tool in JetBrains IDEs (Settings > Tools > External Tools)",
 
   "tools": [
@@ -7,7 +7,7 @@
       "name": "ZombieCoder: Generate SSOT",
       "description": "Auto-generate SSOT.md for current project via ZombieCoder Bridge",
       "program": "powershell",
-      "arguments": "-Command \"try { $dir = '${ProjectFileDir$}'; if (-not $dir) { $dir = '${ContentRoot$}' }; if (-not $dir) { $dir = '${FileDir$}' }; if (-not $dir) { $dir = Get-Location }; $body = '{\\\"directory\\\":\\\"' + $dir.Replace('\\','\\\\') + '\\\"}'; $r = Invoke-WebRequest -Uri 'http://localhost:9999/v1/agent/directory' -Method POST -Body $body -ContentType 'application/json' -TimeoutSec 10 -UseBasicParsing; Write-Output ('SSOT Ready: ' + $r.Content) } catch { Write-Output ('Error: ' + $_.Exception.Message) }\"",
+      "arguments": "-NoProfile -ExecutionPolicy Bypass -Command \"try { $dir = '${ProjectFileDir$}'; if (-not $dir) { $dir = '${ContentRoot$}' }; if (-not $dir) { $dir = '${FileDir$}' }; if (-not $dir) { $dir = (Get-Location).Path }; $payload = @{ directory = $dir } | ConvertTo-Json -Compress; $r = Invoke-RestMethod -Uri 'http://localhost:9999/v1/agent/directory' -Method Post -Body $payload -ContentType 'application/json' -TimeoutSec 10; Write-Output ('SSOT Ready: ' + ($r | ConvertTo-Json -Compress)) } catch { Write-Output ('Error: ' + $_.Exception.Message) }\"",
       "workingDirectory": "$ProjectFileDir$",
       "shortcut": "Ctrl+Alt+Z S"
     },
@@ -15,7 +15,7 @@
       "name": "ZombieCoder: Chat with Agent",
       "description": "Open ZombieCoder agent chat for current file context",
       "program": "powershell",
-      "arguments": "-Command \"try { $r = Invoke-WebRequest -Uri 'http://localhost:9999/v1/agent/chat' -Method POST -Body '{\\\"model\\\":\\\"mimo-v2.5-free\\\",\\\"messages\\\":[{\\\"role\\\":\\\"user\\\",\\\"content\\\":\\\"Analyze the current project structure and suggest improvements.\\\"}]}' -ContentType 'application/json' -TimeoutSec 30 -UseBasicParsing; Write-Output $r.Content.Substring(0, [Math]::Min(1000, $r.Content.Length)) } catch { Write-Output $_.Exception.Message }\"",
+      "arguments": "-NoProfile -ExecutionPolicy Bypass -Command \"try { $payload = @{ model = 'mimo-v2.5-free'; messages = @(@{ role = 'user'; content = 'Analyze the current project structure and suggest improvements.' }) } | ConvertTo-Json -Depth 8 -Compress; $r = Invoke-RestMethod -Uri 'http://localhost:9999/v1/agent/chat' -Method Post -Body $payload -ContentType 'application/json' -TimeoutSec 30; $text = ($r | ConvertTo-Json -Depth 8 -Compress); Write-Output $text.Substring(0, [Math]::Min(1000, $text.Length)) } catch { Write-Output $_.Exception.Message }\"",
       "workingDirectory": "$ProjectFileDir$",
       "shortcut": "Ctrl+Alt+Z C"
     },
@@ -23,7 +23,7 @@
       "name": "ZombieCoder: Project Status",
       "description": "Check ZombieCoder agent system status",
       "program": "powershell",
-      "arguments": "-Command \"try { $r = Invoke-WebRequest -Uri 'http://localhost:9999/v1/agent/status' -TimeoutSec 5 -UseBasicParsing; Write-Output $r.Content.Substring(0, [Math]::Min(500, $r.Content.Length)) } catch { Write-Output 'Bridge not running' }\"",
+      "arguments": "-NoProfile -ExecutionPolicy Bypass -Command \"try { $r = Invoke-RestMethod -Uri 'http://localhost:9999/v1/agent/status' -TimeoutSec 5; $text = ($r | ConvertTo-Json -Compress); Write-Output $text.Substring(0, [Math]::Min(500, $text.Length)) } catch { Write-Output 'Bridge not running' }\"",
       "workingDirectory": "$ProjectFileDir$",
       "shortcut": "Ctrl+Alt+Z P"
     }

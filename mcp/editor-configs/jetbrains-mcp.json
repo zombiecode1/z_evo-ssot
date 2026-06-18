@@ -1,20 +1,22 @@
 {
-  "_comment": "JetBrains MCP Configuration for ZombieCoder — Global Setup",
-  "_usage": "Copy this to ~/.config/JetBrains/GlobalConfig/ or IDE-specific config dir",
+  "_comment": "JetBrains MCP Configuration for ZombieCoder",
+  "_usage": "Import this into Settings | Tools | AI Assistant | Model Context Protocol (MCP)",
 
   "mcpServers": {
-    "zombiecoder-bridge": {
-      "url": "http://localhost:9999/mcp",
-      "transport": "sse",
-      "enabled": true,
-      "_description": "ZombieCoder MCP via HTTP SSE — auto-discovers tools, RAG, identity"
-    },
     "zombiecoder-stdio": {
       "command": "node",
       "args": ["dist/mcp/server-entry.js"],
       "cwd": "${workspaceFolder}",
+      "env": {
+        "WORKSPACE_DIR": "${workspaceFolder}"
+      },
+      "enabled": true,
+      "_description": "Recommended: local MCP server started by JetBrains AI Assistant"
+    },
+    "zombiecoder-bridge": {
+      "url": "http://localhost:9999/mcp",
       "enabled": false,
-      "_description": "Standalone MCP server (use if bridge not running)"
+      "_description": "Optional bridge: use if you want the running Proxi server instead of spawning local MCP"
     }
   }
 }
