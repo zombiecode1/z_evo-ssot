@@ -16,8 +16,38 @@ import path from 'path';
 import { execSync } from 'child_process';
 import BetterSqlite3 from 'better-sqlite3';
 
+function resolveDbPath(): string {
+  const explicit = String(process.env.ZOMBIECODER_DB || '').trim();
+  if (explicit && explicit !== 'auto') {
+    return path.resolve(explicit);
+  }
+
+  const argvEntry = String(process.argv[1] || '').trim();
+  const argvWorkspace = argvEntry
+    ? path.resolve(path.dirname(argvEntry), '..', '..')
+    : '';
+
+  const workspaceDir = String(process.env.WORKSPACE_DIR || '').trim();
+  const candidates = [
+    workspaceDir ? path.join(workspaceDir, '.zombiecoder', 'state.db') : '',
+    argvWorkspace ? path.join(argvWorkspace, '.zombiecoder', 'state.db') : '',
+    path.join(process.cwd(), '.zombiecoder', 'state.db'),
+    path.join(process.cwd(), 'mcp', '.zombiecoder', 'state.db'),
+    path.join(path.dirname(process.cwd()), '.zombiecoder', 'state.db'),
+    path.join(process.env.HOME || process.env.USERPROFILE || '', 'mcp', '.zombiecoder', 'state.db'),
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0] || path.join(process.cwd(), '.zombiecoder', 'state.db');
+}
+
 // MCP server runs as a separate process, so it needs its own DB connection
-const DB_PATH = process.env.ZOMBIECODER_DB || path.join(process.env.HOME || '/home/sahon', 'mcp', '.zombiecoder', 'state.db');
+const DB_PATH = resolveDbPath();
 
 let mcpDb: any = null;
 function getMcpDb(): any {
